@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSP in Comiketland</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <div class="container">
+        <h1>TSP in Comiketland</h1>
+
+    <div id="controls">
+        <p>現在地を入力</p>
+        <label>東西南北: 
+            <select id="current-ewsn">
+                <option value="東456">東456</option>
+                <option value="東7">東7</option>
+                <option value="西12">西12</option>
+                <option value="南12">南12</option>
+            </select>
+        </label>
+        <label>識別子: 
+            <select id="current-label"></select>
+        </label>
+        <label>番号: <input id="current-number" value="0"></label>
+        <div id="remaining-counts">
+            <p>東456: <span id="count-E456">0</span></p>
+            <p>東7: <span id="count-E7">0</span></p>
+            <p>西12: <span id="count-W12">0</span></p>
+            <p>南12: <span id="count-S12">0</span></p>
+        </div>
+
+        <br><br>
+        <button onclick="updateNextTarget()">次の目的地を検索</button>
+    </div>
+    
+    <div id="next-target">
+        <h2>次</h2>
+        <p id="loading">検索ボタンを押してください</p>
+        <div id="target-info">
+            <div class="target-header-content">
+                <div class="target-details">
+                    <p><strong>スペース:</strong> <span id="target-space"></span></p>
+                    <p><strong>距離:</strong> <span id="target-distance"></span></p>
+                    <p><strong>Twitter:</strong> <a id="target-user" href="#" target="_blank"></a></p>
+                </div>
+                <div id="target-actions">
+                    <button id="purchased-btn">購入済</button>
+                    <button id="undo-btn">一つ前に戻す</button>
+                    <button id="reset-list-btn">購入リストをリセット</button>
+                </div>
+            </div>
+            <div id="target-tweet-container"></div>
+        </div>
+    </div>
+
+    </div>
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }).catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

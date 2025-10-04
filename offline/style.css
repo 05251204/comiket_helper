@@ -1,0 +1,246 @@
+@font-face {
+  font-family: 'Noto Sans JP';
+  font-style: normal;
+  font-weight: 400;
+  src: url('fonts/NotoSansJP-Thin.ttf') format('truetype');
+  font-display: swap;
+}
+
+:root {
+    --primary-color: #007bff;
+    --primary-color-dark: #0056b3;
+    --success-color: #28a745;
+    --success-color-dark: #218838;
+    --secondary-color: #6c757d;
+    --background-color: #f4f7f9;
+    --text-color: #333;
+    --container-bg: #ffffff;
+    --border-color: #dee2e6;
+    --border-radius: 8px;
+    --box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    --font-family: 'Noto Sans JP', 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    margin: 0;
+    padding: 1em;
+}
+
+.container {
+    max-width: 600px;
+    margin: 2em auto;
+    padding: 2em;
+    background-color: var(--container-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+h1, h2 {
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 1em;
+}
+
+h2 {
+    margin-top: 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5em;
+}
+
+#controls, #next-target {
+    margin-top: 1.5em;
+    padding: 1.5em;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: #fff;
+}
+
+#next-target {
+    border-color: var(--primary-color);
+}
+
+#target-info {
+    display: none; /* デフォルトで非表示 */
+}
+
+/* Modern Form Styling */
+#controls p {
+    margin-top: 0;
+    margin-bottom: 1.5em;
+    text-align: center;
+    color: #6c757d;
+}
+
+label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1em;
+    font-weight: 500;
+}
+
+input[type="text"],
+#current-number,
+select {
+    width: 60%; /* Adjust width as needed */
+    padding: 10px 12px;
+    font-size: 1em;
+    font-family: inherit; /* フォントを継承 */
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    /* --- Modern Select Styles --- */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.5rem; /* Make space for arrow */
+}
+
+input[type="text"]:focus,
+#current-number:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+
+/* Modern Button Styling */
+/* --- ここから修正 --- */
+#target-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px; /* ボタン間の隙間 */
+    margin-top: 1.5em;
+    justify-content: center; /* ボタンを中央揃え */
+    flex-direction: row; /* ボタンを横に並べる */
+}
+
+#target-actions button {
+    flex-grow: 0; /* 伸びないようにする */
+    width: auto; /* コンテンツの幅に合わせる */
+    margin-top: 0; /* 親要素のmargin-topで調整するためリセット */
+    font-size: 0.9em; /* ボタンの文字サイズを少し小さく */
+    padding: 0.6em 1em; /* ボタンのパディングを調整 */
+    display: block; /* 常に表示されるように明示的に指定 */
+}
+
+button {
+    font-size: 1.1em;
+    font-weight: 600;
+    padding: 0.8em 1.5em;
+    color: #fff;
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    display: block; /* Changed from inline-block */
+    width: 100%;
+    text-align: center;
+    margin-top: 1em; /* Added margin for spacing */
+    font-family: inherit; /* フォントを継承 */
+}
+
+button:hover {
+    background-color: var(--primary-color-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+#purchased-btn {
+    background-color: var(--success-color);
+    /* margin-top: 1.5em; */ /* #target-actions でまとめて管理 */
+}
+
+#purchased-btn:hover {
+    background-color: var(--success-color-dark);
+}
+
+#undo-btn {
+    background-color: var(--secondary-color);
+}
+
+#undo-btn:hover {
+    background-color: #5a6268;
+}
+
+#reset-list-btn {
+    background-color: #dc3545; /* Red for danger */
+}
+
+#reset-list-btn:hover {
+    background-color: #c82333;
+}
+/* --- ここまで修正 --- */
+
+#target-info p {
+    margin: 0.8em 0;
+    font-size: 1.1em;
+}
+
+#target-info p strong {
+    color: #333;
+    min-width: 80px;
+    display: inline-block;
+}
+
+#loading {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+}
+
+/* Remaining Counts Styling */
+#remaining-counts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around; /* アイテム間に均等なスペースを配置 */
+    gap: 10px; /* アイテム間の隙間 */
+    margin-top: 1.5em; /* 上部の余白 */
+    padding: 0.8em 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+#remaining-counts p {
+    margin: 0; /* pタグのデフォルトマージンをリセット */
+    padding: 0.4em 0.8em;
+    background-color: #e9ecef; /* 各カウントの背景色 */
+    border-radius: 4px;
+    font-size: 0.95em;
+    white-space: nowrap; /* テキストの折り返しを防ぐ */
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    .container {
+        margin: 1em;
+        padding: 1.5em;
+    }
+
+    h1 {
+        font-size: 1.6em;
+    }
+
+    label {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    input[type="text"],
+    #current-number {
+        width: calc(100% - 24px); /* Full width minus padding */
+        margin-top: 0.5em;
+    }
+}
