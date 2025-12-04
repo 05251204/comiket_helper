@@ -1,108 +1,99 @@
 <!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TSP in Comiketland</title>
-    <link rel="stylesheet" href="style.css" />
-    <link rel="manifest" href="manifest.json" />
-  </head>
-  <body>
-    <div class="container">
-      <div id="controls">
-        <div class="gas-url-area">
-          <div class="gas-url-header">
-            <label for="gas-url-input">Google Apps Script URL:</label>
-            <button id="refresh-data-btn">更新</button>
-          </div>
-          <input
-            type="text"
-            id="gas-url-input"
-            placeholder="Enter your Web App URL"
-          />
-        </div>
-        <div id="current-location-input"><p>現在地を入力</p></div>
-        <div class="location-inputs">
-          <label
-            >東西南北:
-            <select id="current-ewsn">
-              <option value="東456">東456</option>
-              <option value="東7">東7</option>
-              <option value="西12">西12</option>
-              <option value="南12">南12</option>
-            </select>
-          </label>
-          <label
-            >識別子:
-            <select id="current-label"></select>
-          </label>
-          <label>番号: <input id="current-number" value="0" /></label>
-        </div>
-        <div id="remaining-counts">
-          <p>東456: <span id="count-E456">0</span></p>
-          <p>東7: <span id="count-E7">0</span></p>
-          <p>西12: <span id="count-W12">0</span></p>
-          <p>南12: <span id="count-S12">0</span></p>
-          <p id="hold-counter-container">
-            保留中: <span id="count-hold">0</span>
-          </p>
-        </div>
 
-        <button id="search-button">次の目的地を検索</button>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TSP in Comiketland</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+</head>
+
+<body>
+  <div class="container">
+    <div id="controls">
+      <div class="gas-url-area">
+        <div class="gas-url-header">
+          <label for="gas-url-input">Google Apps Script URL:</label>
+          <button id="refresh-data-btn">更新</button>
+        </div>
+        <input type="text" id="gas-url-input" placeholder="Enter your Web App URL" />
+      </div>
+      <div id="current-location-input">
+        <p>現在地を入力</p>
+      </div>
+      <div class="location-inputs">
+        <label>東西南北:
+          <select id="current-ewsn">
+            <option value="東456">東456</option>
+            <option value="東7">東7</option>
+            <option value="西12">西12</option>
+            <option value="南12">南12</option>
+          </select>
+        </label>
+        <label>識別子:
+          <select id="current-label"></select>
+        </label>
+        <label>番号: <input id="current-number" value="0" /></label>
+      </div>
+      <div id="remaining-counts">
+        <p>東456: <span id="count-E456">0</span></p>
+        <p>東7: <span id="count-E7">0</span></p>
+        <p>西12: <span id="count-W12">0</span></p>
+        <p>南12: <span id="count-S12">0</span></p>
+        <p id="hold-counter-container">
+          保留中: <span id="count-hold">0</span>
+        </p>
       </div>
 
-      <div id="next-target">
-        <h2>次: <span id="target-space-heading"></span></h2>
-        <p id="loading">検索ボタンを押してください</p>
-        <div id="target-info">
-          <div class="target-header-content">
-            <div class="target-details">
-              <p>
-                <strong>距離:</strong> <span id="target-distance"></span>
-                <span style="margin-left: 1em"
-                  ><strong>優先度:</strong> <span id="target-priority"></span
-                ></span>
-                <span style="margin-left: 1em"
-                  ><strong>Twitter:</strong>
-                  <a id="target-user" href="#" target="_blank"></a
-                ></span>
-              </p>
-            </div>
-            <div id="target-actions">
-              <button id="purchased-btn">購入済</button>
-              <button id="hold-btn">保留</button>
-              <button id="undo-btn">一つ前に戻す</button>
-              <button id="reset-list-btn">購入リストをリセット</button>
-            </div>
-          </div>
-          <div id="target-tweet-container"></div>
-        </div>
-      </div>
+      <button id="search-button">次の目的地を検索</button>
     </div>
 
-    <script src="app.js"></script>
-    <script
-      async
-      src="https://platform.twitter.com/widgets.js"
-      charset="utf-8"
-    ></script>
-    <script>
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker
-            .register("/sw.js")
-            .then((registration) => {
-              console.log(
-                "ServiceWorker registration successful with scope: ",
-                registration.scope
-              );
-            })
-            .catch((err) => {
-              console.log("ServiceWorker registration failed: ", err);
-            });
-        });
-      }
-    </script>
-    <div id="feedback-toast"></div>
-  </body>
+    <div id="next-target">
+      <h2>次: <span id="target-space-heading"></span></h2>
+      <p id="loading">検索ボタンを押してください</p>
+      <div id="target-info">
+        <div class="target-header-content">
+          <div class="target-details">
+            <p>
+              <strong>距離:</strong> <span id="target-distance"></span>
+              <span style="margin-left: 1em"><strong>優先度:</strong> <span id="target-priority"></span></span>
+              <span style="margin-left: 1em"><strong>Twitter:</strong>
+                <a id="target-user" href="#" target="_blank"></a></span>
+            </p>
+          </div>
+          <div id="target-actions">
+            <button id="purchased-btn">購入済</button>
+            <button id="hold-btn">保留</button>
+            <button id="undo-btn">一つ前に戻す</button>
+            <button id="reset-list-btn">購入リストをリセット</button>
+          </div>
+        </div>
+        <div id="target-tweet-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((registration) => {
+            console.log(
+              "ServiceWorker registration successful with scope: ",
+              registration.scope
+            );
+          })
+          .catch((err) => {
+            console.log("ServiceWorker registration failed: ", err);
+          });
+      });
+    }
+  </script>
+  <div id="feedback-toast"></div>
+</body>
+
 </html>
