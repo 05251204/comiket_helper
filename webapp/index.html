@@ -8,10 +8,9 @@
     />
     <title>Comi-Navi C106</title>
     <link rel="stylesheet" href="style.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- ドット文字フォント -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap"
       rel="stylesheet"
     />
   </head>
@@ -21,6 +20,7 @@
         <h1>Comi-Navi <span>C106</span></h1>
       </header>
 
+      <!-- 設定・現在地エリア -->
       <section class="card config-card">
         <div class="gas-input-group">
           <input type="text" id="gas-url-input" placeholder="GAS Web App URL" />
@@ -30,8 +30,15 @@
         <div class="location-group">
           <label>現在地</label>
           <div class="select-row">
-            <select id="current-ewsn" class="pill-input"></select>
-            <select id="current-label" class="pill-input"></select>
+            <select id="current-ewsn" class="pill-input">
+              <option value="東456">東456</option>
+              <option value="東7">東7</option>
+              <option value="西12">西12</option>
+              <option value="南12">南12</option>
+            </select>
+            <select id="current-label" class="pill-input">
+              <!-- JSで自動生成されます -->
+            </select>
             <input
               type="number"
               id="current-number"
@@ -56,10 +63,19 @@
         <p id="loading"></p>
       </section>
 
+      <!-- フッター用余白 -->
+      <div style="height: 350px"></div>
+
+      <!-- 固定フッター -->
       <section id="target-info" class="card target-card" style="display: none">
         <div class="target-header">
           <span class="sub-label">NEXT TARGET</span>
           <h2 id="target-space-heading">---</h2>
+        </div>
+
+        <!-- Canvas マップ -->
+        <div class="canvas-container">
+          <canvas id="map-radar" width="300" height="120"></canvas>
         </div>
 
         <div class="target-meta">
@@ -85,7 +101,7 @@
         </div>
 
         <div class="sub-actions">
-          <button id="undo-btn" class="text-btn">↩ ひとつ戻す</button>
+          <button id="undo-btn" class="text-btn">↩ 戻す</button>
           <button id="reset-list-btn" class="text-btn danger">リセット</button>
         </div>
 
@@ -95,7 +111,8 @@
 
     <div id="feedback-toast"></div>
 
-    <script type="module" src="main.js"></script>
+    <!-- シンプルな読み込みに戻しました -->
+    <script src="app.js"></script>
     <script
       async
       src="https://platform.twitter.com/widgets.js"

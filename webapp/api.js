@@ -1,3 +1,4 @@
+// api.js - 通信処理
 // データを取得 (GET)
 export async function fetchSheetData(url) {
   const response = await fetch(url);
@@ -7,7 +8,7 @@ export async function fetchSheetData(url) {
 
 // データの更新 (POST)
 export function postUpdate(url, payload) {
-  if (!url) return Promise.resolve(null); // URLがない場合は何もしない
+  if (!url) return Promise.resolve(null);
 
   return fetch(url, {
     method: "POST",

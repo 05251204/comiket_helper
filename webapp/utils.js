@@ -1,6 +1,6 @@
+// utils.js
 import { labelOptions } from "./config.js";
 
-// フィードバック（トースト）表示用タイマー
 let feedbackTimer;
 
 export function showFeedback(message) {
@@ -21,7 +21,6 @@ export function toHalfWidth(str) {
   );
 }
 
-// スペース文字列を解析して [ホール, 識別子, 番号] を返す
 export function distinct_space(space) {
   if (!space) return ["", "", ""];
   let ewsnChar = space[0];
@@ -45,15 +44,18 @@ export function distinct_space(space) {
   return [hallGroupKey, labelChar, number];
 }
 
-// 距離計算
 export function calc_dist(ewsn1, label1, number1, ewsn2, label2, number2) {
-  // 簡易的な補正（32番以降を折り返しとして扱うロジック等）
-  if (number1 > 32) number1 = 64 - number1;
-  if (number2 > 32) number2 = 64 - number2;
+  let n1 = parseFloat(number1) || 0;
+  let n2 = parseFloat(number2) || 0;
 
-  if (ewsn1 !== ewsn2) return 1e9; // ホールが違う場合は距離を無限大に
+  if (n1 > 32) n1 = 64 - n1;
+  if (n2 > 32) n2 = 64 - n2;
+
+  if (ewsn1[0] !== ewsn2[0]) return 10000;
+  let hallPenalty = ewsn1 !== ewsn2 ? 1000 : 0;
 
   const labelDist = Math.abs(label1.charCodeAt(0) - label2.charCodeAt(0));
-  const numberDist = Math.abs(number1 - number2);
-  return labelDist * 4 + numberDist;
+  const numberDist = Math.abs(n1 - n2);
+
+  return labelDist * 20 + numberDist + hallPenalty;
 }
