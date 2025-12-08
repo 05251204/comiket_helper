@@ -1,0 +1,178 @@
+import { Config } from "./config.js";
+
+/**
+ * データ管理クラス
+ * LocalStorageの読み書き、GASとの通信を担当
+ */
+export class DataManager {
+  constructor() {
+    // メモリ上にデータを保持
+    this.wantToBuy = [];
+    this.purchasedList =
+      JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.PURCHASED)) || [];
+    this.holdList =
+      JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.HOLD)) || [];
+    this.actionHistory =
+      JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.HISTORY)) || [];
+  }
+
+  /**
+   * 保存されているGASのWebアプリURLを取得
+   */
+  getGasUrl() {
+    return localStorage.getItem(Config.STORAGE_KEYS.URL) || "";
+  }
+
+  /**
+   * GASのWebアプリURLを保存
+   */
+  setGasUrl(url) {
+    localStorage.setItem(Config.STORAGE_KEYS.URL, url);
+  }
+
+  /**
+   * スプレッドシートからデータを取得
+   * @param {boolean} forceRefresh - キャッシュを無視して強制取得するか
+   */
+  async fetchFromSheet(forceRefresh = false) {
+    const url = this.getGasUrl();
+    if (!url) throw new Error("URL未設定");
+
+    // 強制更新でなければLocalStorageのキャッシュを試す
+    if (!forceRefresh) {
+      const saved = localStorage.getItem(Config.STORAGE_KEYS.DATA);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        this.wantToBuy = parsed.wantToBuy || [];
+        return this.wantToBuy.length;
+      }
+    }
+
+    // ネットワーク通信
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("通信エラー");
+      const data = await res.json();
+      this.wantToBuy = data.wantToBuy || [];
+      // データをキャッシュ
+      localStorage.setItem(
+        Config.STORAGE_KEYS.DATA,
+        JSON.stringify({ wantToBuy: this.wantToBuy })
+      );
+      return this.wantToBuy.length;
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  /**
+   * GASへ更新情報を送信（バックグラウンド処理用）
+   */
+  async syncUpdate(space, isUndo = false, isBatch = false) {
+    const url = this.getGasUrl();
+    if (!url) return;
+
+    const payload = isBatch
+      ? { spaces: space, undo: true }
+      : { space: space, undo: isUndo };
+
+    // awaitせずに投げっぱなしにする（UIのレスポンス優先）
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload),
+    }).catch((e) => console.error("Sync failed:", e));
+  }
+
+  /**
+   * 購入リストに追加
+   */
+  addPurchased(space) {
+    if (!this.purchasedList.includes(space)) {
+      this.purchasedList.push(space);
+      this.saveList(Config.STORAGE_KEYS.PURCHASED, this.purchasedList);
+      this.addHistory("purchase", space);
+    }
+  }
+
+  /**
+   * 保留リストに追加
+   */
+  addHold(space) {
+    if (!this.holdList.includes(space)) {
+      this.holdList.push(space);
+      this.saveList(Config.STORAGE_KEYS.HOLD, this.holdList);
+      this.addHistory("hold", space);
+    }
+  }
+
+  /**
+   * 直前の操作を取り消す
+   */
+  undoLastAction() {
+    const last = this.actionHistory.pop();
+    if (!last) return null;
+
+    this.saveList(Config.STORAGE_KEYS.HISTORY, this.actionHistory);
+
+    if (last.type === "purchase") {
+      this.purchasedList = this.purchasedList.filter((s) => s !== last.space);
+      this.saveList(Config.STORAGE_KEYS.PURCHASED, this.purchasedList);
+    } else if (last.type === "hold") {
+      this.holdList = this.holdList.filter((s) => s !== last.space);
+      this.saveList(Config.STORAGE_KEYS.HOLD, this.holdList);
+    }
+    return last;
+  }
+
+  /**
+   * 全データをリセット
+   */
+  resetAll() {
+    const backup = [...this.purchasedList]; // バックアップ（一括Undo用）
+    this.purchasedList = [];
+    this.holdList = [];
+    this.actionHistory = [];
+
+    localStorage.removeItem(Config.STORAGE_KEYS.PURCHASED);
+    localStorage.removeItem(Config.STORAGE_KEYS.HOLD);
+    localStorage.removeItem(Config.STORAGE_KEYS.HISTORY);
+    return backup;
+  }
+
+  /**
+   * 保留リストのみリセット
+   */
+  resetHold() {
+    this.holdList = [];
+    localStorage.removeItem(Config.STORAGE_KEYS.HOLD);
+    this.actionHistory = this.actionHistory.filter((a) => a.type !== "hold");
+    this.saveList(Config.STORAGE_KEYS.HISTORY, this.actionHistory);
+  }
+
+  /**
+   * 操作履歴に追加（内部用）
+   */
+  addHistory(type, space) {
+    this.actionHistory.push({ type, space });
+    this.saveList(Config.STORAGE_KEYS.HISTORY, this.actionHistory);
+  }
+
+  /**
+   * LocalStorageへの保存（内部用）
+   */
+  saveList(key, list) {
+    localStorage.setItem(key, JSON.stringify(list));
+  }
+
+  /**
+   * 未訪問（購入も保留もしていない）のリストを取得
+   */
+  getUnvisited() {
+    return this.wantToBuy.filter(
+      (c) =>
+        !this.purchasedList.includes(c.space) &&
+        !this.holdList.includes(c.space)
+    );
+  }
+}
