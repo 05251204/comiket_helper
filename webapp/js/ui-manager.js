@@ -21,6 +21,7 @@ export class UIManager {
       priority: document.getElementById("target-priority"),
       tweetLink: document.getElementById("target-tweet-link"),
       tweetEmbed: document.getElementById("tweet-embed-container"),
+      mapLinksContainer: document.getElementById("map-links-container"),
       toast: document.getElementById("toast"),
 
       // Counts
@@ -28,10 +29,15 @@ export class UIManager {
       cntE7: document.getElementById("count-e7"),
       cntW12: document.getElementById("count-w12"),
       cntS12: document.getElementById("count-s12"),
-      cntHold: document.getElementById("count-hold"),
+      // cntHoldは削除、エリア別に変更
+      cntHoldE456: document.getElementById("count-hold-e456"),
+      cntHoldE7: document.getElementById("count-hold-e7"),
+      cntHoldW12: document.getElementById("count-hold-w12"),
+      cntHoldS12: document.getElementById("count-hold-s12"),
     };
 
     this.toastTimer = null;
+    this.customSelects = {}; // カスタムセレクトの制御インスタンス保持用
   }
 
   /**
@@ -41,7 +47,7 @@ export class UIManager {
     // 設定読み込み
     this.els.gasUrl.value = dataManager.getGasUrl();
 
-    // セレクトボックス初期化
+    // セレクトボックス初期化 (EWSN)
     this.els.locEwsn.innerHTML = "";
     Object.keys(Config.LABEL_OPTIONS).forEach((key) => {
       const opt = document.createElement("option");
@@ -50,18 +56,140 @@ export class UIManager {
       this.els.locEwsn.appendChild(opt);
     });
 
-    this.els.locEwsn.addEventListener("change", () =>
-      this.updateLabelOptions()
-    );
-    this.updateLabelOptions();
+    // 初期化時はイベントリスナーを設定せず、カスタムセレクト構築後に連携させる
+    // this.els.locEwsn.addEventListener("change", ...) は setupCustomSelect 内で処理されるか、
+    // ネイティブ発火に合わせて動作するようにする
 
+    // ラベル初期化
+    this.updateLabelOptions(false); // まだカスタムセレクトはないのでfalse
+
+    // セレクトボックス初期化 (Number)
+    this.els.locNumber.innerHTML = "";
+    const numOptions = [10, 20, 30, 40, 50, 60];
+    numOptions.forEach((num) => {
+      const opt = document.createElement("option");
+      opt.value = num;
+      opt.textContent = num;
+      this.els.locNumber.appendChild(opt);
+    });
+
+    // カスタムセレクトの適用
+    this.customSelects.ewsn = this.setupCustomSelect(this.els.locEwsn, () => {
+      this.updateLabelOptions(true); // 変更時にラベル更新
+    });
+    this.customSelects.label = this.setupCustomSelect(this.els.locLabel);
+    this.customSelects.number = this.setupCustomSelect(this.els.locNumber);
+
+    this.renderMapLinks(); // 地図リンクの生成
     this.updateCounts(dataManager);
+  }
+
+  /**
+   * 地図リンクボタンの生成
+   */
+  renderMapLinks() {
+    if (!this.els.mapLinksContainer || !Config.MAP_LINKS) return;
+
+    this.els.mapLinksContainer.innerHTML = "";
+    Object.entries(Config.MAP_LINKS).forEach(([name, url]) => {
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.className = "map-link-btn";
+      a.innerHTML = `<i class="fa-regular fa-map"></i> ${name}`;
+      this.els.mapLinksContainer.appendChild(a);
+    });
+  }
+
+  /**
+   * カスタムセレクトボックスのセットアップ
+   */
+  setupCustomSelect(nativeSelect, onChangeCallback) {
+    // ラッパー作成
+    const wrapper = document.createElement("div");
+    wrapper.className = "custom-select-wrapper";
+    nativeSelect.parentNode.insertBefore(wrapper, nativeSelect);
+    wrapper.appendChild(nativeSelect);
+
+    // トリガー（表示部分）作成
+    const trigger = document.createElement("div");
+    trigger.className = "custom-select-trigger";
+    // 初期値設定
+    const initialText =
+      nativeSelect.options[nativeSelect.selectedIndex]?.textContent || "";
+    trigger.textContent = initialText;
+    wrapper.appendChild(trigger);
+
+    // オプションリスト作成
+    const optionsList = document.createElement("div");
+    optionsList.className = "custom-options";
+    wrapper.appendChild(optionsList);
+
+    // オプション生成関数
+    const renderOptions = () => {
+      optionsList.innerHTML = "";
+      Array.from(nativeSelect.options).forEach((opt) => {
+        const optionDiv = document.createElement("div");
+        optionDiv.className =
+          "custom-option" + (opt.selected ? " selected" : "");
+        optionDiv.textContent = opt.textContent;
+        optionDiv.dataset.value = opt.value;
+        optionDiv.onclick = (e) => {
+          e.stopPropagation();
+          nativeSelect.value = opt.value;
+          // ネイティブのchangeイベントを発火させる必要があればここで行うが、
+          // callbackで処理するならそれで良い
+          trigger.textContent = opt.textContent;
+          optionsList.classList.remove("open");
+
+          // 選択状態更新
+          Array.from(optionsList.children).forEach((el) =>
+            el.classList.remove("selected")
+          );
+          optionDiv.classList.add("selected");
+
+          if (onChangeCallback) onChangeCallback();
+        };
+        optionsList.appendChild(optionDiv);
+      });
+    };
+    renderOptions();
+
+    // トリガークリックイベント
+    trigger.onclick = (e) => {
+      e.stopPropagation();
+      // 他の開いているセレクトを閉じる
+      document.querySelectorAll(".custom-options.open").forEach((el) => {
+        if (el !== optionsList) el.classList.remove("open");
+      });
+      optionsList.classList.toggle("open");
+    };
+
+    // 外側クリックで閉じる
+    document.addEventListener("click", (e) => {
+      if (!wrapper.contains(e.target)) {
+        optionsList.classList.remove("open");
+      }
+    });
+
+    // 外部から値を更新した時のための再描画メソッド
+    return {
+      render: () => {
+        renderOptions();
+        const selected = nativeSelect.options[nativeSelect.selectedIndex];
+        if (selected) trigger.textContent = selected.textContent;
+      },
+      updateTrigger: () => {
+        const selected = nativeSelect.options[nativeSelect.selectedIndex];
+        if (selected) trigger.textContent = selected.textContent;
+      },
+    };
   }
 
   /**
    * 現在地のプルダウン更新
    */
-  updateLabelOptions() {
+  updateLabelOptions(updateCustom = false) {
     const selected = this.els.locEwsn.value;
     this.els.locLabel.innerHTML = "";
     (Config.LABEL_OPTIONS[selected] || []).forEach((val) => {
@@ -70,6 +198,11 @@ export class UIManager {
       opt.textContent = val;
       this.els.locLabel.appendChild(opt);
     });
+
+    // カスタムセレクトの再描画
+    if (updateCustom && this.customSelects.label) {
+      this.customSelects.label.render();
+    }
   }
 
   /**
@@ -100,7 +233,7 @@ export class UIManager {
     if (target.tweet) {
       this.els.tweetLink.href = target.tweet;
       this.els.tweetLink.style.display = "block";
-      this.els.tweetLink.innerHTML = `<i class="fa-brands fa-twitter"></i> お品書き / Twitter`;
+      this.els.tweetLink.innerHTML = `<i class="fa-brands fa-twitter"></i> Link`;
     } else if (target.account) {
       this.els.tweetLink.href = target.account;
       this.els.tweetLink.style.display = "block";
@@ -139,7 +272,22 @@ export class UIManager {
     this.els.cntE7.textContent = counts["東7"];
     this.els.cntW12.textContent = counts["西12"];
     this.els.cntS12.textContent = counts["南12"];
-    this.els.cntHold.textContent = dm.holdList.length;
+
+    // 保留数のエリア別カウント
+    const holdCounts = { 東456: 0, 東7: 0, 西12: 0, 南12: 0 };
+    dm.holdList.forEach((space) => {
+      const [key] = TspSolver.parseSpace(space);
+      if (holdCounts[key] !== undefined) holdCounts[key]++;
+    });
+
+    if (this.els.cntHoldE456)
+      this.els.cntHoldE456.textContent = holdCounts["東456"];
+    if (this.els.cntHoldE7)
+      this.els.cntHoldE7.textContent = holdCounts["東7"];
+    if (this.els.cntHoldW12)
+      this.els.cntHoldW12.textContent = holdCounts["西12"];
+    if (this.els.cntHoldS12)
+      this.els.cntHoldS12.textContent = holdCounts["南12"];
   }
 
   /**
@@ -168,9 +316,20 @@ export class UIManager {
   updateCurrentLocation(space) {
     const [ewsn, label, number] = TspSolver.parseSpace(space);
     this.els.locEwsn.value = ewsn;
-    this.updateLabelOptions(); // ラベルオプションを再描画
+    this.updateLabelOptions(true); // カスタムセレクトも更新
     this.els.locLabel.value = label;
-    this.els.locNumber.value = number;
+
+    // 番号を最も近い選択肢(10, 20...)に丸める
+    const options = [10, 20, 30, 40, 50, 60];
+    const closest = options.reduce((prev, curr) => {
+      return Math.abs(curr - number) < Math.abs(prev - number) ? curr : prev;
+    });
+    this.els.locNumber.value = closest;
+
+    // カスタムセレクトの表示を更新
+    if (this.customSelects.ewsn) this.customSelects.ewsn.updateTrigger();
+    if (this.customSelects.label) this.customSelects.label.updateTrigger();
+    if (this.customSelects.number) this.customSelects.number.updateTrigger();
   }
 
   /**

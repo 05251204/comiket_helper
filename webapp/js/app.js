@@ -19,6 +19,9 @@ class App {
     this.ui.init(this.dm);
     this.setupEvents();
 
+    // 未送信キューの処理を試行
+    this.dm.processQueue();
+
     // データがあれば初期表示
     if (this.dm.wantToBuy.length > 0) {
       this.ui.showToast("データ読み込み済み");
@@ -54,6 +57,12 @@ class App {
     document.getElementById("btn-reset-all").onclick = () => this.handleReset();
     document.getElementById("btn-hold-list").onclick = () =>
       this.handleResetHold();
+
+    // オンライン復帰時の同期
+    window.addEventListener("online", () => {
+      this.ui.showToast("オンラインに復帰しました。同期中...");
+      this.dm.processQueue();
+    });
   }
 
   /**
@@ -61,6 +70,10 @@ class App {
    */
   async refreshData(force = false) {
     this.ui.showToast("データ更新中...");
+    
+    // 送信待ちがあれば先に送る
+    this.dm.processQueue();
+
     try {
       const count = await this.dm.fetchFromSheet(force);
       this.ui.updateCounts(this.dm);
@@ -116,7 +129,7 @@ class App {
 
     if (type === "purchase") {
       this.dm.addPurchased(space);
-      this.dm.syncUpdate(space); // GAS送信
+      this.dm.syncUpdate(space); // GAS送信 (Queue経由)
       this.ui.showToast(`${space} 購入！`);
     } else {
       this.dm.addHold(space);
@@ -135,7 +148,7 @@ class App {
     const action = this.dm.undoLastAction();
     if (action) {
       if (action.type === "purchase") {
-        this.dm.syncUpdate(action.space, true); // Undo送信
+        this.dm.syncUpdate(action.space, true); // Undo送信 (Queue経由)
       }
       this.ui.showToast(`${action.space} の操作を取り消しました`);
       this.ui.updateCounts(this.dm);
@@ -153,7 +166,7 @@ class App {
     if (confirm("本当にリセットしますか？")) {
       const backup = this.dm.resetAll();
       if (backup.length > 0) {
-        this.dm.syncUpdate(backup, true, true); // 一括Undo
+        this.dm.syncUpdate(backup, true, true); // 一括Undo (Queue経由)
       }
       this.ui.updateCounts(this.dm);
       this.ui.showTarget(null); // 表示クリア

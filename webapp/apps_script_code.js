@@ -13,6 +13,9 @@ function convertCharacters(original) {
   return converted;
 }
 
+// この関数は、Google Apps Scriptの「編集時」トリガー (onEdit) で使用することを想定しています。
+// スプレッドシート上でセルが編集された際に自動的に発火し、スペース表記を整形します。
+// Webアプリ (doGet/doPost) から直接呼び出されることはありません。
 function autoUpdateDate() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet();
   const current = sheet.getActiveCell();
@@ -175,6 +178,7 @@ function doPost(e) {
       ).setMimeType(ContentService.MimeType.JSON);
     }
 
+    let foundAndUpdated = false;
     // 設定された各シートを順番に検索。
     for (const sheetName of TARGET_SHEET_NAMES) {
       const sheet =
@@ -203,24 +207,30 @@ function doPost(e) {
               .getRange(i + 1, statusColumnIndex + 1)
               .setValue(PURCHASED_STATUS_TEXT);
           }
-          // 成功レスポンスを返して処理を終了。
-          return ContentService.createTextOutput(
-            JSON.stringify({
-              status: "success",
-              message: `Updated ${spaceToUpdate} in ${sheetName}, undo: ${undo}`,
-            })
-          ).setMimeType(ContentService.MimeType.JSON);
+          foundAndUpdated = true;
+          break; // 見つかったらループを抜ける (単一更新のため)
         }
       }
+      if (foundAndUpdated) break; // シートが見つかったらシートのループも抜ける
     }
 
-    // 全てのシートを検索してもスペースが見つからなかった場合。
-    return ContentService.createTextOutput(
-      JSON.stringify({
-        status: "error",
-        message: "Space not found in any of the specified sheets",
-      })
-    ).setMimeType(ContentService.MimeType.JSON);
+    if (foundAndUpdated) {
+      // 成功レスポンスを返して処理を終了。
+      return ContentService.createTextOutput(
+        JSON.stringify({
+          status: "success",
+          message: `Updated ${spaceToUpdate}, undo: ${undo}`,
+        })
+      ).setMimeType(ContentService.MimeType.JSON);
+    } else {
+      // 全てのシートを検索してもスペースが見つからなかった場合。
+      return ContentService.createTextOutput(
+        JSON.stringify({
+          status: "error",
+          message: `Space "${spaceToUpdate}" not found in any of the specified sheets.`,
+        })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
   } catch (error) {
     // その他の予期せぬエラーが発生した場合。
     return ContentService.createTextOutput(
@@ -228,3 +238,4 @@ function doPost(e) {
     ).setMimeType(ContentService.MimeType.JSON);
   }
 }
+

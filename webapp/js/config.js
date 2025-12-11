@@ -8,11 +8,11 @@ export const Config = {
       "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨ".split(
         ""
       ),
-    東7: "ABCDEFGHIJKLMNOPQRSTUVW".split(""),
+    東7: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
     西12: "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめ".split(
       ""
     ),
-    南12: "abcdefghijklmnopqrst".split(""),
+    南12: "abcdefghijklmnopqrstuvwxyz".split(""),
   },
   // LocalStorageのキー
   STORAGE_KEYS: {
@@ -21,5 +21,13 @@ export const Config = {
     HISTORY: "actionHistory",
     DATA: "comiketData",
     URL: "webAppURL",
+    SYNC_QUEUE: "syncQueue",
+  },
+  // 東西南北ごとの地図のpdfリンク
+  MAP_LINKS: {
+    東456: "https://www.comiket.co.jp/info-a/C106/C106Map_e456_B4.pdf",
+    東7: "https://www.comiket.co.jp/info-a/C106/C106Map_e7_B4.pdf",
+    西12: "https://www.comiket.co.jp/info-a/C106/C106Map_w12_B4.pdf",
+    南12: "https://www.comiket.co.jp/info-a/C106/C106Map_s12_B4.pdf",
   },
 };

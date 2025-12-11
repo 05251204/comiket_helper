@@ -69,7 +69,7 @@
             <div class="location-controls">
               <select id="loc-ewsn"></select>
               <select id="loc-label"></select>
-              <input type="number" id="loc-number" value="1" min="1" max="99" />
+              <select id="loc-number"></select>
             </div>
         </div>
         <button
@@ -139,6 +139,11 @@
         </div>
       </div>
 
+      <!-- 地図リンク -->
+      <div id="map-links-container" class="map-links-grid">
+        <!-- JSで動的に生成 -->
+      </div>
+
       <!-- ステータス -->
       <div class="card compact-card">
         <div class="stats-container">
@@ -156,9 +161,18 @@
               <span>南</span> <strong id="count-s12">0</strong>
             </div>
           </div>
-          <div id="btn-hold-list" class="stats-row hold-row">
-            <span>保留中 <strong id="count-hold">0</strong></span>
-            <i class="fa-solid fa-chevron-right"></i>
+          <!-- 保留中サークル数の表示 -->
+          <div class="stats-row hold-row">
+            <div class="hold-counts">
+              <span>保留中: </span>
+              <div class="mini-stats-inline">
+                <span>東4-6: <b id="count-hold-e456">0</b></span>
+                <span>東7: <b id="count-hold-e7">0</b></span>
+                <span>西: <b id="count-hold-w12">0</b></span>
+                <span>南: <b id="count-hold-s12">0</b></span>
+              </div>
+            </div>
+            <i class="fa-solid fa-chevron-right" id="btn-hold-list-icon"></i>
           </div>
         </div>
         <button

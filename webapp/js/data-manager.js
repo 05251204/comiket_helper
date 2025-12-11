@@ -14,6 +14,9 @@ export class DataManager {
       JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.HOLD)) || [];
     this.actionHistory =
       JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.HISTORY)) || [];
+    // 送信待ちキュー
+    this.syncQueue =
+      JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.SYNC_QUEUE)) || [];
   }
 
   /**
@@ -66,22 +69,78 @@ export class DataManager {
   }
 
   /**
-   * GASへ更新情報を送信（バックグラウンド処理用）
+   * GASへ更新情報を送信（キュー経由）
    */
   async syncUpdate(space, isUndo = false, isBatch = false) {
-    const url = this.getGasUrl();
-    if (!url) return;
-
     const payload = isBatch
       ? { spaces: space, undo: true }
       : { space: space, undo: isUndo };
 
-    // awaitせずに投げっぱなしにする（UIのレスポンス優先）
-    fetch(url, {
+    this.addToQueue(payload);
+    this.processQueue(); // バックグラウンドで送信試行
+  }
+
+  /**
+   * 送信キューに追加
+   */
+  addToQueue(payload) {
+    const item = {
+      id: Date.now() + Math.random().toString(36).substring(2),
+      timestamp: Date.now(),
+      payload: payload,
+    };
+    this.syncQueue.push(item);
+    this.saveList(Config.STORAGE_KEYS.SYNC_QUEUE, this.syncQueue);
+  }
+
+  /**
+   * キューを処理して送信
+   */
+  async processQueue() {
+    if (this.syncQueue.length === 0) return;
+    if (this.isProcessing) return; // 二重実行防止
+
+    const url = this.getGasUrl();
+    if (!url) return;
+
+    this.isProcessing = true;
+
+    try {
+      // 先頭から順に処理
+      while (this.syncQueue.length > 0) {
+        const item = this.syncQueue[0];
+        try {
+          await this.sendToGas(url, item.payload);
+          // 成功したらキューから削除
+          this.syncQueue.shift();
+          this.saveList(Config.STORAGE_KEYS.SYNC_QUEUE, this.syncQueue);
+        } catch (e) {
+          console.error("Sync failed, retrying later:", e);
+          break; // 失敗したら中断（順序保持のため）
+        }
+      }
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  /**
+   * 実際の送信処理 (内部用)
+   */
+  async sendToGas(url, payload) {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload),
-    }).catch((e) => console.error("Sync failed:", e));
+    });
+    // HTTPステータスがOKでなければ即座にエラー
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+    const jsonResponse = await res.json();
+    // アプリケーションレベルでのエラーをチェック
+    if (jsonResponse.status !== "success") {
+      throw new Error(`GAS Error: ${jsonResponse.message}`);
+    }
   }
 
   /**
