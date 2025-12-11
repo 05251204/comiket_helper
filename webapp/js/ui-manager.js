@@ -163,6 +163,17 @@ export class UIManager {
   }
 
   /**
+   * 現在地表示を更新
+   */
+  updateCurrentLocation(space) {
+    const [ewsn, label, number] = TspSolver.parseSpace(space);
+    this.els.locEwsn.value = ewsn;
+    this.updateLabelOptions(); // ラベルオプションを再描画
+    this.els.locLabel.value = label;
+    this.els.locNumber.value = number;
+  }
+
+  /**
    * ロード画面の表示
    */
   showLoading() {

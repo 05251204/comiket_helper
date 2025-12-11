@@ -124,6 +124,7 @@ class App {
     }
 
     this.ui.updateCounts(this.dm);
+    this.ui.updateCurrentLocation(space); // 現在地を更新
     this.searchNext(); // 自動で次を検索
   }
 
@@ -138,6 +139,7 @@ class App {
       }
       this.ui.showToast(`${action.space} の操作を取り消しました`);
       this.ui.updateCounts(this.dm);
+      this.ui.updateCurrentLocation(action.space); // 現在地を元に戻す
       // 画面は更新しない（現在地が変わっていないため）
     } else {
       this.ui.showToast("履歴がありません");

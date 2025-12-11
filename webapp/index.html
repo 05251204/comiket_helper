@@ -64,16 +64,18 @@
 
       <!-- 現在地入力 -->
       <div class="card">
-        <h2>現在地</h2>
-        <div class="location-controls">
-          <select id="loc-ewsn"></select>
-          <select id="loc-label"></select>
-          <input type="number" id="loc-number" value="1" min="1" max="99" />
+        <div class="current-location-header">
+            <h2>現在地</h2>
+            <div class="location-controls">
+              <select id="loc-ewsn"></select>
+              <select id="loc-label"></select>
+              <input type="number" id="loc-number" value="1" min="1" max="99" />
+            </div>
         </div>
         <button
           id="btn-search"
           class="btn btn-primary"
-          style="margin-top: 1rem"
+          style="margin-top: 0.5rem"
         >
           <i class="fa-solid fa-magnifying-glass"></i> 次の目的地を検索
         </button>
@@ -86,25 +88,32 @@
         </div>
 
         <div id="target-content" class="hidden">
-          <div class="target-header">
-            <span class="target-label">NEXT TARGET</span>
-            <h1 id="target-space-heading">---</h1>
+          <div class="target-info-display">
+            <div class="target-group-wrapper">
+              <div class="target-circle-info">
+                <span class="target-label">NEXT TARGET</span>
+                <h1 id="target-space-heading">---</h1>
+              </div>
+              <a
+                id="target-tweet-link"
+                href="#"
+                target="_blank"
+                class="tweet-link"
+              >
+                <i class="fa-brands fa-twitter"></i> Link
+              </a>
+              <div class="target-meta compact">
+                <span class="meta-item"
+                  ><i class="fa-solid fa-person-walking"></i>
+                  <span id="target-dist">-</span></span
+                >
+                <span class="meta-item"
+                  ><i class="fa-solid fa-star"></i>
+                  <span id="target-priority">-</span></span
+                >
+              </div>
+            </div>
           </div>
-
-          <div class="target-meta">
-            <span class="meta-item"
-              ><i class="fa-solid fa-person-walking"></i>
-              <span id="target-dist">-</span></span
-            >
-            <span class="meta-item"
-              ><i class="fa-solid fa-star"></i>
-              <span id="target-priority">-</span></span
-            >
-          </div>
-
-          <a id="target-tweet-link" href="#" target="_blank" class="tweet-link">
-            <i class="fa-brands fa-twitter"></i> お品書き / Twitter
-          </a>
 
           <div id="tweet-embed-container" class="tweet-preview"></div>
 
@@ -131,39 +140,33 @@
       </div>
 
       <!-- ステータス -->
-      <div class="card">
-        <h2>残りサークル数</h2>
-        <div class="stats-grid">
-          <div class="stat-item">
-            東456 <span id="count-e456" class="stat-badge">0</span>
+      <div class="card compact-card">
+        <div class="stats-container">
+          <div class="stats-row">
+            <div class="mini-stat">
+              <span>東4-6</span> <strong id="count-e456">0</strong>
+            </div>
+            <div class="mini-stat">
+              <span>東7</span> <strong id="count-e7">0</strong>
+            </div>
+            <div class="mini-stat">
+              <span>西</span> <strong id="count-w12">0</strong>
+            </div>
+            <div class="mini-stat">
+              <span>南</span> <strong id="count-s12">0</strong>
+            </div>
           </div>
-          <div class="stat-item">
-            東7 <span id="count-e7" class="stat-badge">0</span>
-          </div>
-          <div class="stat-item">
-            西12 <span id="count-w12" class="stat-badge">0</span>
-          </div>
-          <div class="stat-item">
-            南12 <span id="count-s12" class="stat-badge">0</span>
-          </div>
-          <div
-            id="btn-hold-list"
-            class="stat-item hold"
-            style="grid-column: span 2"
-          >
-            保留中 <span id="count-hold" class="stat-badge">0</span>
-            <i
-              class="fa-solid fa-chevron-right"
-              style="font-size: 0.8rem; margin-left: auto"
-            ></i>
+          <div id="btn-hold-list" class="stats-row hold-row">
+            <span>保留中 <strong id="count-hold">0</strong></span>
+            <i class="fa-solid fa-chevron-right"></i>
           </div>
         </div>
         <button
           id="btn-reset-all"
-          class="btn btn-danger"
-          style="margin-top: 1.5rem"
+          class="btn btn-danger btn-sm"
+          style="margin-top: 0.5rem"
         >
-          <i class="fa-solid fa-trash"></i> 購入リストをリセット
+          <i class="fa-solid fa-trash"></i> リセット
         </button>
       </div>
     </div>
