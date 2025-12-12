@@ -34,6 +34,11 @@ export class UIManager {
       cntHoldE7: document.getElementById("count-hold-e7"),
       cntHoldW12: document.getElementById("count-hold-w12"),
       cntHoldS12: document.getElementById("count-hold-s12"),
+
+      // PDF Modal
+      pdfModal: document.getElementById("pdf-modal"),
+      pdfFrame: document.getElementById("pdf-frame"),
+      btnClosePdf: document.getElementById("btn-close-pdf"),
     };
 
     this.toastTimer = null;
@@ -46,6 +51,9 @@ export class UIManager {
   init(dataManager) {
     // 設定読み込み
     this.els.gasUrl.value = dataManager.getGasUrl();
+
+    // PDF閉じるボタン
+    this.els.btnClosePdf.addEventListener("click", () => this.hidePdfModal());
 
     // セレクトボックス初期化 (EWSN)
     this.els.locEwsn.innerHTML = "";
@@ -92,13 +100,28 @@ export class UIManager {
 
     this.els.mapLinksContainer.innerHTML = "";
     Object.entries(Config.MAP_LINKS).forEach(([name, url]) => {
-      const a = document.createElement("a");
-      a.href = url;
-      a.target = "_blank";
-      a.className = "map-link-btn";
-      a.innerHTML = `<i class="fa-regular fa-map"></i> ${name}`;
-      this.els.mapLinksContainer.appendChild(a);
+      const button = document.createElement("button");
+      button.className = "map-link-btn";
+      button.innerHTML = `<i class="fa-regular fa-map"></i> ${name}`;
+      button.onclick = () => this.showPdfModal(url);
+      this.els.mapLinksContainer.appendChild(button);
     });
+  }
+
+  /**
+   * PDFモーダルを表示
+   */
+  showPdfModal(url) {
+    this.els.pdfFrame.src = url;
+    this.els.pdfModal.classList.remove("hidden");
+  }
+
+  /**
+   * PDFモーダルを非表示
+   */
+  hidePdfModal() {
+    this.els.pdfModal.classList.add("hidden");
+    this.els.pdfFrame.src = ""; // Stop loading/playing
   }
 
   /**
