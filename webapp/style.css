@@ -588,3 +588,62 @@ input[type="text"] {
   height: 100%;
   border: none;
 }
+
+.sub-target-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* 左寄せ */
+  opacity: 0.8; /* 少し薄く */
+}
+
+.sub-target-label {
+  display: inline-block;
+  background-color: var(--secondary); /* グレー */
+  color: white;
+  font-size: 0.6rem;
+  padding: 1px 6px;
+  border-radius: 20px;
+  margin-bottom: 2px;
+  font-weight: bold;
+}
+
+.sub-target-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1;
+}
+
+/* Map Embed */
+.map-embed-container {
+  margin-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.5rem;
+}
+
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.map-label {
+  font-size: 0.8rem;
+  color: var(--text-sub);
+  font-weight: bold;
+}
+
+.map-external-link {
+  color: var(--primary);
+  font-size: 0.9rem;
+  padding: 4px;
+}
+
+.map-embed-container iframe {
+  width: 100%;
+  height: 250px; /* スマホで大きすぎず小さすぎず */
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background-color: #f1f5f9;
+}

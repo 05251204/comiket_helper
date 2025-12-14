@@ -114,7 +114,8 @@ class App {
       // path[0]は現在地、path[1]が次の目的地
       if (path.length > 1) {
         this.currentTarget = path[1];
-        this.ui.showTarget(this.currentTarget, currentSpace);
+        const nextTarget = path.length > 2 ? path[2] : null;
+        this.ui.showTarget(this.currentTarget, currentSpace, nextTarget);
       }
     }, 50);
   }

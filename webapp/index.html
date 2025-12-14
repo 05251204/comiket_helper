@@ -94,6 +94,10 @@
                 <span class="target-label">NEXT TARGET</span>
                 <h1 id="target-space-heading">---</h1>
               </div>
+              <div class="sub-target-info">
+                <span class="sub-target-label">NEXT AFTER</span>
+                <span id="sub-target-space" class="sub-target-value">---</span>
+              </div>
               <a
                 id="target-tweet-link"
                 href="#"
@@ -116,6 +120,14 @@
           </div>
 
           <div id="tweet-embed-container" class="tweet-preview"></div>
+
+          <div id="target-map-container" class="map-embed-container">
+             <div class="map-header">
+               <span class="map-label"><i class="fa-regular fa-map"></i> MAP: <span id="map-area-name">-</span></span>
+               <a id="target-map-link" href="#" target="_blank" class="map-external-link"><i class="fa-solid fa-up-right-from-square"></i></a>
+             </div>
+             <iframe id="target-map-frame" src=""></iframe>
+          </div>
 
           <div class="action-grid">
             <button id="btn-purchased" class="btn btn-success">

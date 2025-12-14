@@ -19,8 +19,16 @@ export class UIManager {
       heading: document.getElementById("target-space-heading"),
       dist: document.getElementById("target-dist"),
       priority: document.getElementById("target-priority"),
+      subTargetSpace: document.getElementById("sub-target-space"),
       tweetLink: document.getElementById("target-tweet-link"),
       tweetEmbed: document.getElementById("tweet-embed-container"),
+      
+      // Map Embed
+      mapContainer: document.getElementById("target-map-container"),
+      mapFrame: document.getElementById("target-map-frame"),
+      mapAreaName: document.getElementById("map-area-name"),
+      mapLink: document.getElementById("target-map-link"),
+
       mapLinksContainer: document.getElementById("map-links-container"),
       toast: document.getElementById("toast"),
 
@@ -231,7 +239,7 @@ export class UIManager {
   /**
    * 次の目的地の表示更新
    */
-  showTarget(target, startSpace) {
+  showTarget(target, startSpace, nextTarget) {
     this.els.targetLoading.classList.add("hidden");
     this.els.targetEmpty.classList.add("hidden");
     this.els.targetSection.classList.remove("hidden");
@@ -241,6 +249,7 @@ export class UIManager {
       this.els.heading.textContent = "COMPLETE!";
       this.els.dist.textContent = "-";
       this.els.priority.textContent = "-";
+      this.els.subTargetSpace.textContent = "---";
       this.els.tweetEmbed.innerHTML = "";
       return;
     }
@@ -248,6 +257,7 @@ export class UIManager {
     // 基本情報の表示
     this.els.heading.textContent = target.space;
     this.els.priority.textContent = target.priority || "Normal";
+    this.els.subTargetSpace.textContent = nextTarget ? nextTarget.space : "---";
 
     const dist = TspSolver.calcDist(startSpace, target.space);
     this.els.dist.textContent = dist >= 10000 ? "別エリア" : `距離 ${dist}`;
@@ -276,6 +286,22 @@ export class UIManager {
           theme: "light",
         });
       }
+    }
+
+    // 地図の埋め込み表示更新
+    const [hallGroup] = TspSolver.parseSpace(target.space);
+    if (hallGroup && Config.MAP_LINKS[hallGroup]) {
+      const url = Config.MAP_LINKS[hallGroup];
+      this.els.mapContainer.classList.remove("hidden");
+      this.els.mapAreaName.textContent = hallGroup;
+      
+      // 同じURLならリロードしない
+      if (this.els.mapFrame.getAttribute("src") !== url) {
+         this.els.mapFrame.src = url;
+      }
+      this.els.mapLink.href = url;
+    } else {
+      this.els.mapContainer.classList.add("hidden");
     }
   }
 
