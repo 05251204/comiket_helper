@@ -7,7 +7,10 @@ import { Config } from "./config.js";
 export class DataManager {
   constructor() {
     // メモリ上にデータを保持
-    this.wantToBuy = [];
+    const savedData =
+      JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.DATA));
+    this.wantToBuy = savedData ? savedData.wantToBuy : [];
+    
     this.purchasedList =
       JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.PURCHASED)) || [];
     this.holdList =

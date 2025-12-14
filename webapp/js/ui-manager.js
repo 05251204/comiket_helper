@@ -29,7 +29,7 @@ export class UIManager {
       
       // Map Embed
       mapContainer: document.getElementById("target-map-container"),
-      mapFrame: document.getElementById("target-map-frame"),
+      mapImage: document.getElementById("target-map-image"),
       mapAreaName: document.getElementById("map-area-name"),
       mapLink: document.getElementById("target-map-link"),
 
@@ -49,7 +49,7 @@ export class UIManager {
 
       // PDF Modal
       pdfModal: document.getElementById("pdf-modal"),
-      pdfFrame: document.getElementById("pdf-frame"),
+      pdfImage: document.getElementById("pdf-modal-image"),
       btnClosePdf: document.getElementById("btn-close-pdf"),
     };
 
@@ -173,9 +173,8 @@ export class UIManager {
    * PDFモーダルを表示
    */
   showPdfModal(url) {
-    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-    this.els.pdfFrame.src = viewerUrl;
     this.els.pdfModal.classList.remove("hidden");
+    this.els.pdfImage.src = url;
   }
 
   /**
@@ -183,7 +182,7 @@ export class UIManager {
    */
   hidePdfModal() {
     this.els.pdfModal.classList.add("hidden");
-    this.els.pdfFrame.src = ""; // Stop loading/playing
+    this.els.pdfImage.src = "";
   }
 
   /**
@@ -350,9 +349,8 @@ export class UIManager {
       this.els.mapAreaName.textContent = hallGroup;
       
       // 同じURLならリロードしない
-      const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-      if (this.els.mapFrame.getAttribute("src") !== viewerUrl) {
-         this.els.mapFrame.src = viewerUrl;
+      if (this.els.mapImage.getAttribute("src") !== url) {
+         this.els.mapImage.src = url;
       }
       this.els.mapLink.href = url;
     } else {

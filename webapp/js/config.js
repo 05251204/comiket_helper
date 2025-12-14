@@ -24,11 +24,10 @@ export const Config = {
     SYNC_QUEUE: "syncQueue",
     SELECTED_SHEETS: "selectedSheets",
   },
-  // 東西南北ごとの地図のpdfリンク
   MAP_LINKS: {
-    東456: "https://www.comiket.co.jp/info-a/C106/C106Map_e456_B4.pdf",
-    東7: "https://www.comiket.co.jp/info-a/C106/C106Map_e7_B4.pdf",
-    西12: "https://www.comiket.co.jp/info-a/C106/C106Map_w12_B4.pdf",
-    南12: "https://www.comiket.co.jp/info-a/C106/C106Map_s12_B4.pdf",
+    東456: "./maps/C106Map_e456.jpg",
+    東7: "./maps/C106Map_e7.jpg",
+    西12: "./maps/C106Map_w12.jpg",
+    南12: "./maps/C106Map_s12.jpg",
   },
 };
