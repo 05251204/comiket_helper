@@ -56,8 +56,8 @@ function autoUpdateDate() {
 }
 
 // --- グローバル設定項目 ---
-// 読み書きの対象となるシート名のリスト。必要に応じて追加・変更してください。
-const TARGET_SHEET_NAMES = ["day1_1"];
+// デフォルトのシート名リスト。パラメータ指定がない場合に使用。
+const DEFAULT_SHEET_NAMES = ["day1_1"];
 // サークルのスペース情報が書かれている列のヘッダー名（完全一致）。
 const SPACE_COLUMN_NAME = "space";
 // 購入済みかどうかを記録する列のヘッダー名（完全一致）。
@@ -68,24 +68,47 @@ const PURCHASED_STATUS_TEXT = "x";
 
 /**
  * WebページからのGETリクエストを処理するメイン関数。
- * 複数のシートから「購入済みでない」サークル情報を取得し、JSON形式で返す。
+ * アクションに応じてシート一覧取得、または指定シートのデータ取得を行う。
+ * 
+ * パラメータ:
+ * - action: 'getSheets' の場合、全シート名を返す。
+ * - sheets: カンマ区切りのシート名リスト（データ取得時）。指定がない場合はデフォルトを使用。
+ * 
  * @param {object} e - Apps Scriptが受け取るイベントオブジェクト。
- * @returns {ContentService.TextOutput} - wantToBuyキーを持つJSON形式のレスポンス。
+ * @returns {ContentService.TextOutput} - JSON形式のレスポンス。
  */
 function doGet(e) {
+  const action = e.parameter.action;
+
+  // シート一覧の取得
+  if (action === "getSheets") {
+    const allSheets = SpreadsheetApp.getActiveSpreadsheet().getSheets();
+    const sheetNames = allSheets.map(s => s.getName());
+    return ContentService.createTextOutput(
+      JSON.stringify({ sheets: sheetNames })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // データ取得（デフォルト動作）
+  let targetSheets = DEFAULT_SHEET_NAMES;
+  if (e.parameter.sheets) {
+    targetSheets = e.parameter.sheets.split(",").map(s => s.trim());
+  }
+
   let combinedResult = []; // 複数のシートの結果を結合するための配列。
 
   // 設定されたシート名でループ処理。
-  TARGET_SHEET_NAMES.forEach((sheetName) => {
+  targetSheets.forEach((sheetName) => {
     const sheet =
       SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-    // シートが見つからない場合は警告を出してスキップ。
+    // シートが見つからない場合はスキップ。
     if (!sheet) {
       console.warn(`Sheet "${sheetName}" not found. Skipping.`);
       return;
     }
 
     const data = sheet.getDataRange().getValues(); // シートの全データを二次元配列として取得。
+    if (data.length === 0) return;
 
     // ヘッダー行（1行目）を取得し、小文字に変換・空白削除して整形。
     const headers = data
@@ -121,6 +144,7 @@ function doGet(e) {
 /**
  * WebページからのPOSTリクエストを処理するメイン関数。
  * 指定されたスペースの購入ステータスを更新（または元に戻す）。
+ * 
  * @param {object} e - Apps Scriptが受け取るイベントオブジェクト（POSTデータを含む）。
  * @returns {ContentService.TextOutput} - JSON形式の処理結果レスポンス。
  */
@@ -130,19 +154,28 @@ function doPost(e) {
     const postData = JSON.parse(e.postData.contents);
     const undo = postData.undo || false; // undoフラグ（購入取り消しかどうか）。なければfalseになる。
 
+    // 対象とするシート群。パラメータで指定があればそれを使うが、
+    // 基本的には全シート探索で問題ない（同じスペース名が別シートにある確率は低い、あるいは運用でカバー）
+    // バッチリセットなどは全シート対象が望ましい。
+    // ここでは念の為、全シートを取得して検索対象とするか、パラメータがあればそれに従う形にするが、
+    // 既存ロジックの「指定されたデフォルトリスト」を「スプレッドシート内の全シート」に変えるのが
+    // 最も汎用的であるため、ここでは全シートを対象に探索するように変更する。
+    // （運用上、特定のシートのみを対象にしたい場合はパラメータ渡しが必要だが、今回は簡略化のため全シート探索とする）
+    
+    const allSheets = SpreadsheetApp.getActiveSpreadsheet().getSheets();
+    const targetSheets = allSheets; // 全シート対象
+
     // --- バッチリセット処理 ---
     // postDataに 'spaces' というキーで配列が渡され、かつ undo=true の場合に動作。
     if (postData.spaces && Array.isArray(postData.spaces) && undo) {
       const spacesToReset = postData.spaces;
       let resetCount = 0;
 
-      // 設定された各シートを順番に検索。
-      for (const sheetName of TARGET_SHEET_NAMES) {
-        const sheet =
-          SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-        if (!sheet) continue; // シートが存在しない場合はスキップ。
-
+      // 各シートを順番に検索。
+      for (const sheet of targetSheets) {
         const data = sheet.getDataRange().getValues();
+        if (data.length === 0) continue;
+
         const headers = data[0];
         const spaceColumnIndex = headers.indexOf(SPACE_COLUMN_NAME);
         const statusColumnIndex = headers.indexOf(STATUS_COLUMN_NAME);
@@ -179,13 +212,11 @@ function doPost(e) {
     }
 
     let foundAndUpdated = false;
-    // 設定された各シートを順番に検索。
-    for (const sheetName of TARGET_SHEET_NAMES) {
-      const sheet =
-        SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-      if (!sheet) continue; // シートが存在しない場合はスキップ。
-
+    // 各シートを順番に検索。
+    for (const sheet of targetSheets) {
       const data = sheet.getDataRange().getValues();
+      if (data.length === 0) continue;
+      
       const headers = data[0];
       // ヘッダー名から「space」列と「soldout」列のインデックス番号を取得。
       const spaceColumnIndex = headers.indexOf(SPACE_COLUMN_NAME);
@@ -238,4 +269,3 @@ function doPost(e) {
     ).setMimeType(ContentService.MimeType.JSON);
   }
 }
-

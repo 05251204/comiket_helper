@@ -17,6 +17,9 @@ export class DataManager {
     // 送信待ちキュー
     this.syncQueue =
       JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.SYNC_QUEUE)) || [];
+    // 選択されたシートリスト
+    this.selectedSheets =
+      JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.SELECTED_SHEETS)) || [];
   }
 
   /**
@@ -34,12 +37,57 @@ export class DataManager {
   }
 
   /**
+   * 選択されているシートリストを取得
+   */
+  getSelectedSheets() {
+    return this.selectedSheets;
+  }
+
+  /**
+   * 選択されているシートリストを保存
+   */
+  setSelectedSheets(sheets) {
+    this.selectedSheets = sheets;
+    localStorage.setItem(
+      Config.STORAGE_KEYS.SELECTED_SHEETS,
+      JSON.stringify(this.selectedSheets)
+    );
+  }
+
+  /**
+   * GASからシート一覧を取得
+   */
+  async fetchSheetList() {
+    const baseUrl = this.getGasUrl();
+    if (!baseUrl) throw new Error("URL未設定");
+
+    const url = `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}action=getSheets`;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("通信エラー");
+      const data = await res.json();
+      return data.sheets || [];
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  /**
    * スプレッドシートからデータを取得
    * @param {boolean} forceRefresh - キャッシュを無視して強制取得するか
    */
   async fetchFromSheet(forceRefresh = false) {
-    const url = this.getGasUrl();
+    let url = this.getGasUrl();
     if (!url) throw new Error("URL未設定");
+
+    // 選択されたシートがあればパラメータに追加
+    if (this.selectedSheets.length > 0) {
+      const separator = url.includes("?") ? "&" : "?";
+      url += `${separator}sheets=${encodeURIComponent(
+        this.selectedSheets.join(",")
+      )}`;
+    }
 
     // 強制更新でなければLocalStorageのキャッシュを試す
     if (!forceRefresh) {

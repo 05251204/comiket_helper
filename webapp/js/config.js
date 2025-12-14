@@ -22,6 +22,7 @@ export const Config = {
     DATA: "comiketData",
     URL: "webAppURL",
     SYNC_QUEUE: "syncQueue",
+    SELECTED_SHEETS: "selectedSheets",
   },
   // 東西南北ごとの地図のpdfリンク
   MAP_LINKS: {

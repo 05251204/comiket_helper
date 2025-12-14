@@ -10,6 +10,10 @@ export class UIManager {
     this.els = {
       gasUrl: document.getElementById("gas-url"),
       settingsArea: document.getElementById("settings-area"),
+      // Sheet Selection
+      btnFetchSheets: document.getElementById("btn-fetch-sheets"),
+      sheetListContainer: document.getElementById("sheet-list-container"),
+      
       locEwsn: document.getElementById("loc-ewsn"),
       locLabel: document.getElementById("loc-label"),
       locNumber: document.getElementById("loc-number"),
@@ -117,10 +121,60 @@ export class UIManager {
   }
 
   /**
+   * シート一覧チェックボックスリストの描画
+   */
+  renderSheetList(sheets, selectedSheets, onChangeCallback) {
+    const container = this.els.sheetListContainer;
+    container.innerHTML = "";
+
+    if (!sheets || sheets.length === 0) {
+      container.textContent = "シートが見つかりません";
+      return;
+    }
+
+    sheets.forEach((sheetName) => {
+      const itemDiv = document.createElement("div");
+      itemDiv.className = "sheet-item";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.id = `sheet-${sheetName}`;
+      checkbox.value = sheetName;
+      checkbox.checked = selectedSheets.includes(sheetName);
+
+      const label = document.createElement("label");
+      label.htmlFor = `sheet-${sheetName}`;
+      label.textContent = sheetName;
+
+      // チェックボックス変更イベント
+      checkbox.addEventListener("change", () => {
+        onChangeCallback();
+      });
+
+      itemDiv.appendChild(checkbox);
+      itemDiv.appendChild(label);
+      container.appendChild(itemDiv);
+    });
+  }
+
+  /**
+   * 選択されているシート名の配列を取得
+   */
+  getSelectedSheetsFromUI() {
+    const container = this.els.sheetListContainer;
+    const checked = [];
+    container.querySelectorAll('input[type="checkbox"]:checked').forEach((cb) => {
+      checked.push(cb.value);
+    });
+    return checked;
+  }
+
+  /**
    * PDFモーダルを表示
    */
   showPdfModal(url) {
-    this.els.pdfFrame.src = url;
+    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    this.els.pdfFrame.src = viewerUrl;
     this.els.pdfModal.classList.remove("hidden");
   }
 
@@ -296,8 +350,9 @@ export class UIManager {
       this.els.mapAreaName.textContent = hallGroup;
       
       // 同じURLならリロードしない
-      if (this.els.mapFrame.getAttribute("src") !== url) {
-         this.els.mapFrame.src = url;
+      const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+      if (this.els.mapFrame.getAttribute("src") !== viewerUrl) {
+         this.els.mapFrame.src = viewerUrl;
       }
       this.els.mapLink.href = url;
     } else {

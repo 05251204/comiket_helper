@@ -44,6 +44,23 @@ class App {
       this.dm.setGasUrl(e.target.value);
     });
 
+    // シート一覧取得ボタン
+    this.ui.els.btnFetchSheets.onclick = async () => {
+      this.ui.showToast("シート一覧を取得中...");
+      try {
+        const sheets = await this.dm.fetchSheetList();
+        const selected = this.dm.getSelectedSheets();
+        this.ui.renderSheetList(sheets, selected, () => {
+          // チェックボックス変更時のコールバック
+          const newSelected = this.ui.getSelectedSheetsFromUI();
+          this.dm.setSelectedSheets(newSelected);
+        });
+        this.ui.showToast("シート一覧を更新しました");
+      } catch (e) {
+        this.ui.showToast("シート一覧取得失敗: " + e.message);
+      }
+    };
+
     // 各種ボタンアクション
     document.getElementById("btn-refresh").onclick = () =>
       this.refreshData(true);
