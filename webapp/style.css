@@ -180,6 +180,15 @@ h1 {
   margin-top: 0.5rem; /* マージン削減 */
 }
 
+.undo-redo-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+
 .btn {
   border: none;
   border-radius: 10px;
@@ -229,12 +238,12 @@ h1 {
 }
 
 .btn-undo {
-  grid-column: span 2;
+  /* grid-column: span 2;  Removed since we split it */
   background: #f1f5f9;
   color: var(--text-sub);
   font-size: 0.85rem;
   padding: 0.5rem;
-  margin-top: 0.25rem;
+  /* margin-top: 0.25rem; Removed */
 }
 
 /* Location Inputs */
@@ -363,86 +372,61 @@ input[type="text"] {
   font-weight: 700;
 }
 
-/* Compact Stats (New) */
+/* Compact Stats (Table) */
 .stats-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  overflow-x: auto;
 }
 
-.stats-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 4px;
-}
-
-.mini-stat {
-  background: #f1f5f9;
-  border-radius: 6px;
-  padding: 4px 6px;
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
   text-align: center;
-  flex: 1;
+}
+
+.stats-table th {
+  padding: 4px;
+  color: var(--text-sub);
+  font-weight: normal;
+  font-size: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.stats-table td {
+  padding: 6px 4px;
+  font-weight: 700;
+  color: var(--text-main);
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.stats-table tr:last-child td {
+  border-bottom: none;
+}
+
+.status-label {
+  display: inline-block;
   font-size: 0.75rem;
   color: var(--text-sub);
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
+  font-weight: normal;
 }
 
-.mini-stat strong {
-  color: var(--text-main);
-  font-size: 1rem;
-  font-weight: 700;
+.status-label.warning {
+  color: #b45309; /* Darker Amber */
 }
 
+/* Hold Row (Clickable) */
 .hold-row {
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
-  color: #b45309;
-  padding: 6px 12px;
-  border-radius: 8px;
   cursor: pointer;
-  font-weight: 500;
-  font-size: 0.9rem;
-  display: flex; /* 追加 */
-  justify-content: space-between; /* 追加 */
-  align-items: center; /* 追加 */
-  flex-wrap: wrap; /* 追加 */
+  background-color: #fffbeb; /* Light Amber */
+  transition: background-color 0.2s;
 }
 
-/* hold-row の中の要素のスタイル */
-.hold-counts {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap; /* エリアカウントが多ければ折り返す */
-  flex-grow: 1; /* スペースを占有 */
+.hold-row:hover {
+  background-color: #fcd34d; /* Amber-300 */
 }
 
-.hold-counts > span { /* 「保留中: 」テキストのフォントサイズ */
-  font-size: 0.85rem;
-  white-space: nowrap; /* 「保留中: 」が改行しないように */
-}
-
-.mini-stats-inline {
-  display: flex;
-  gap: 6px; /* エリア間の間隔を少し減らす */
-  flex-wrap: wrap;
-}
-
-.mini-stats-inline span {
-  font-size: 0.7rem; /* エリア名のフォントサイズ */
-  white-space: nowrap; /* 折り返さない */
-}
-
-.mini-stats-inline strong {
-  font-size: 0.85rem; /* カウントのフォントサイズ */
-  font-weight: 700;
-}
-.hold-row strong {
-  margin: 0 4px;
-  font-size: 1rem;
+.hold-row td {
+  color: #b45309;
 }
 
 /* Settings Area */

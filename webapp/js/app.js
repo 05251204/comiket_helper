@@ -70,7 +70,11 @@ class App {
       this.handleAction("purchase");
     document.getElementById("btn-hold").onclick = () =>
       this.handleAction("hold");
+    
+    // Undo / Redo
     document.getElementById("btn-undo").onclick = () => this.handleUndo();
+    document.getElementById("btn-redo").onclick = () => this.handleRedo();
+
     document.getElementById("btn-reset-all").onclick = () => this.handleReset();
     document.getElementById("btn-hold-list").onclick = () =>
       this.handleResetHold();
@@ -174,6 +178,24 @@ class App {
       // 画面は更新しない（現在地が変わっていないため）
     } else {
       this.ui.showToast("履歴がありません");
+    }
+  }
+
+  /**
+   * やり直し処理 (Redo)
+   */
+  handleRedo() {
+    const action = this.dm.redoAction();
+    if (action) {
+      if (action.type === "purchase") {
+        this.dm.syncUpdate(action.space); // 再送信
+      }
+      this.ui.showToast(`${action.space} の操作をやり直しました`);
+      this.ui.updateCounts(this.dm);
+      this.ui.updateCurrentLocation(action.space); // 現在地を更新
+      this.searchNext(); // 次を自動検索
+    } else {
+      this.ui.showToast("やり直す操作がありません");
     }
   }
 

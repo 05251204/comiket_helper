@@ -17,6 +17,9 @@ export class DataManager {
       JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.HOLD)) || [];
     this.actionHistory =
       JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.HISTORY)) || [];
+    this.redoStack = 
+      JSON.parse(localStorage.getItem("redoStack")) || [];
+
     // 送信待ちキュー
     this.syncQueue =
       JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.SYNC_QUEUE)) || [];
@@ -225,12 +228,43 @@ export class DataManager {
 
     this.saveList(Config.STORAGE_KEYS.HISTORY, this.actionHistory);
 
+    // Redoスタックに追加
+    this.redoStack.push(last);
+    this.saveList("redoStack", this.redoStack);
+
     if (last.type === "purchase") {
       this.purchasedList = this.purchasedList.filter((s) => s !== last.space);
       this.saveList(Config.STORAGE_KEYS.PURCHASED, this.purchasedList);
     } else if (last.type === "hold") {
       this.holdList = this.holdList.filter((s) => s !== last.space);
       this.saveList(Config.STORAGE_KEYS.HOLD, this.holdList);
+    }
+    return last;
+  }
+
+  /**
+   * 取り消した操作をやり直す
+   */
+  redoAction() {
+    const last = this.redoStack.pop();
+    if (!last) return null;
+
+    this.saveList("redoStack", this.redoStack);
+
+    // 履歴に戻す（addHistoryを使うとredoStackが消えてしまうので手動で）
+    this.actionHistory.push(last);
+    this.saveList(Config.STORAGE_KEYS.HISTORY, this.actionHistory);
+
+    if (last.type === "purchase") {
+        if (!this.purchasedList.includes(last.space)) {
+            this.purchasedList.push(last.space);
+            this.saveList(Config.STORAGE_KEYS.PURCHASED, this.purchasedList);
+        }
+    } else if (last.type === "hold") {
+        if (!this.holdList.includes(last.space)) {
+            this.holdList.push(last.space);
+            this.saveList(Config.STORAGE_KEYS.HOLD, this.holdList);
+        }
     }
     return last;
   }
@@ -243,10 +277,12 @@ export class DataManager {
     this.purchasedList = [];
     this.holdList = [];
     this.actionHistory = [];
+    this.redoStack = [];
 
     localStorage.removeItem(Config.STORAGE_KEYS.PURCHASED);
     localStorage.removeItem(Config.STORAGE_KEYS.HOLD);
     localStorage.removeItem(Config.STORAGE_KEYS.HISTORY);
+    localStorage.removeItem("redoStack");
     return backup;
   }
 
@@ -258,6 +294,9 @@ export class DataManager {
     localStorage.removeItem(Config.STORAGE_KEYS.HOLD);
     this.actionHistory = this.actionHistory.filter((a) => a.type !== "hold");
     this.saveList(Config.STORAGE_KEYS.HISTORY, this.actionHistory);
+    // Redoスタックも整合性が取れなくなるのでクリアする
+    this.redoStack = [];
+    localStorage.removeItem("redoStack");
   }
 
   /**
@@ -266,6 +305,9 @@ export class DataManager {
   addHistory(type, space) {
     this.actionHistory.push({ type, space });
     this.saveList(Config.STORAGE_KEYS.HISTORY, this.actionHistory);
+    // 新しい操作が行われたらRedoスタックはクリア
+    this.redoStack = [];
+    localStorage.removeItem("redoStack");
   }
 
   /**

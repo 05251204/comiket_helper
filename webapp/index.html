@@ -148,8 +148,13 @@
             <button id="btn-hold" class="btn btn-warning">
               <i class="fa-solid fa-pause"></i> 保留
             </button>
-            <button id="btn-undo" class="btn btn-undo">
-              <i class="fa-solid fa-rotate-left"></i> 直前の操作を取り消す
+          </div>
+          <div class="undo-redo-container">
+            <button id="btn-undo" class="btn btn-secondary">
+              <i class="fa-solid fa-rotate-left"></i> Undo
+            </button>
+            <button id="btn-redo" class="btn btn-secondary">
+              <i class="fa-solid fa-rotate-right"></i> Redo
             </button>
           </div>
         </div>
@@ -171,33 +176,33 @@
       <!-- ステータス -->
       <div class="card compact-card">
         <div class="stats-container">
-          <div class="stats-row">
-            <div class="mini-stat">
-              <span>東4-6</span> <strong id="count-e456">0</strong>
-            </div>
-            <div class="mini-stat">
-              <span>東7</span> <strong id="count-e7">0</strong>
-            </div>
-            <div class="mini-stat">
-              <span>西</span> <strong id="count-w12">0</strong>
-            </div>
-            <div class="mini-stat">
-              <span>南</span> <strong id="count-s12">0</strong>
-            </div>
-          </div>
-          <!-- 保留中サークル数の表示 -->
-          <div class="stats-row hold-row">
-            <div class="hold-counts">
-              <span>保留中: </span>
-              <div class="mini-stats-inline">
-                <span>東4-6: <b id="count-hold-e456">0</b></span>
-                <span>東7: <b id="count-hold-e7">0</b></span>
-                <span>西: <b id="count-hold-w12">0</b></span>
-                <span>南: <b id="count-hold-s12">0</b></span>
-              </div>
-            </div>
-            <i class="fa-solid fa-chevron-right" id="btn-hold-list-icon"></i>
-          </div>
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>東4-6</th>
+                <th>東7</th>
+                <th>西</th>
+                <th>南</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="status-label">残り</td>
+                <td id="count-e456">0</td>
+                <td id="count-e7">0</td>
+                <td id="count-w12">0</td>
+                <td id="count-s12">0</td>
+              </tr>
+              <tr id="btn-hold-list" class="hold-row">
+                <td class="status-label warning">保留</td>
+                <td id="count-hold-e456">0</td>
+                <td id="count-hold-e7">0</td>
+                <td id="count-hold-w12">0</td>
+                <td id="count-hold-s12">0</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
         <button
           id="btn-reset-all"

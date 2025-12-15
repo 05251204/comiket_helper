@@ -102,6 +102,92 @@ export class UIManager {
 
     this.renderMapLinks(); // 地図リンクの生成
     this.updateCounts(dataManager);
+    
+    // モーダル画像のズーム機能初期化
+    this.setupZoom(document.getElementById("modal-image-container"), this.els.pdfImage);
+  }
+
+  /**
+   * 画像のピンチズーム・パン機能を設定
+   */
+  setupZoom(container, img) {
+    let scale = 1;
+    let pointX = 0;
+    let pointY = 0;
+    let startX = 0;
+    let startY = 0;
+    let initialDist = 0;
+
+    // スタイル初期化
+    container.style.overflow = "hidden";
+    container.style.touchAction = "none";
+    img.style.transformOrigin = "center center";
+    img.style.transition = "transform 0.1s ease-out";
+
+    // リセット機能の公開
+    img.resetZoom = () => {
+      scale = 1;
+      pointX = 0;
+      pointY = 0;
+      img.style.transform = `translate(0px, 0px) scale(1)`;
+    };
+
+    // タッチ開始
+    container.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) {
+        // パン開始
+        startX = e.touches[0].clientX - pointX;
+        startY = e.touches[0].clientY - pointY;
+        img.style.transition = "none";
+      } else if (e.touches.length === 2) {
+        // ズーム開始
+        initialDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        img.style.transition = "none";
+      }
+    });
+
+    // タッチ移動
+    container.addEventListener("touchmove", (e) => {
+      if (e.cancelable) e.preventDefault(); // スクロール阻止
+
+      if (e.touches.length === 1) {
+        // パン
+        pointX = e.touches[0].clientX - startX;
+        pointY = e.touches[0].clientY - startY;
+      } else if (e.touches.length === 2) {
+        // ズーム
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        // 距離の変化比率でスケール変更（簡易的）
+        const diff = dist - initialDist;
+        scale += diff * 0.01;
+        initialDist = dist; // 逐次更新
+
+        // 制限
+        scale = Math.max(0.5, Math.min(scale, 5));
+      }
+
+      img.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+    });
+
+    // タッチ終了
+    container.addEventListener("touchend", (e) => {
+        if (e.touches.length === 0) {
+            img.style.transition = "transform 0.2s ease-out";
+            // スケールが小さすぎる場合は戻す
+            if (scale < 1) {
+                scale = 1;
+                pointX = 0;
+                pointY = 0;
+                img.style.transform = `translate(0px, 0px) scale(1)`;
+            }
+        }
+    });
   }
 
   /**
@@ -175,6 +261,9 @@ export class UIManager {
   showPdfModal(url) {
     this.els.pdfModal.classList.remove("hidden");
     this.els.pdfImage.src = url;
+    if (this.els.pdfImage.resetZoom) {
+      this.els.pdfImage.resetZoom();
+    }
   }
 
   /**
@@ -345,10 +434,16 @@ export class UIManager {
     const [hallGroup] = TspSolver.parseSpace(target.space);
     if (hallGroup && Config.MAP_LINKS[hallGroup]) {
       const url = Config.MAP_LINKS[hallGroup];
-      this.els.mapContainer.classList.remove("hidden");
+      
+      // コンテナを表示
+      const isHidden = this.els.mapContainer.classList.contains("hidden");
+      if (isHidden) {
+        this.els.mapContainer.classList.remove("hidden");
+      }
+
       this.els.mapAreaName.textContent = hallGroup;
       
-      // 同じURLならリロードしない
+      // 同じURLならリロードしない (属性値で厳密に比較)
       if (this.els.mapImage.getAttribute("src") !== url) {
          this.els.mapImage.src = url;
       }
