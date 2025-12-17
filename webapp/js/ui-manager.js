@@ -29,6 +29,7 @@ export class UIManager {
       
       // Map Embed
       mapContainer: document.getElementById("target-map-container"),
+      mapImageScrollContainer: document.getElementById("map-image-container"),
       mapImage: document.getElementById("target-map-image"),
       mapAreaName: document.getElementById("map-area-name"),
       mapLink: document.getElementById("target-map-link"),
