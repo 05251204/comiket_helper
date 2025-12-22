@@ -409,7 +409,8 @@ export class UIManager {
     if (target.tweet) {
       this.els.tweetLink.href = target.tweet;
       this.els.tweetLink.style.display = "block";
-      this.els.tweetLink.innerHTML = `<i class="fa-brands fa-twitter"></i> Link`;
+      this.els.tweetLink.innerHTML = `<i class="fa-regular fa-image"></i> Menu`;
+      this.els.tweetLink.target = "_blank";
     } else if (target.account) {
       this.els.tweetLink.href = target.account;
       this.els.tweetLink.style.display = "block";
@@ -420,15 +421,18 @@ export class UIManager {
       this.els.tweetLink.style.display = "none";
     }
 
-    // ツイート埋め込み (簡易実装)
+    // お品書き画像表示
     this.els.tweetEmbed.innerHTML = "";
-    if (target.tweet && window.twttr) {
-      const match = target.tweet.match(/status\/(\d+)/);
-      if (match) {
-        twttr.widgets.createTweet(match[1], this.els.tweetEmbed, {
-          theme: "light",
-        });
-      }
+    if (target.tweet) {
+      const img = document.createElement("img");
+      img.src = target.tweet;
+      img.alt = "お品書き";
+      img.style.maxWidth = "100%";
+      img.style.height = "auto";
+      img.style.borderRadius = "8px";
+      img.style.cursor = "pointer";
+      img.onclick = () => window.open(target.tweet, "_blank");
+      this.els.tweetEmbed.appendChild(img);
     }
 
     // 地図の埋め込み表示更新
