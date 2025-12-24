@@ -104,8 +104,11 @@ export class UIManager {
     this.renderMapLinks(); // 地図リンクの生成
     this.updateCounts(dataManager);
     
-    // モーダル画像のズーム機能初期化
+    // 画像のズーム機能初期化
+    // 1. モーダル画像
     this.setupZoom(document.getElementById("modal-image-container"), this.els.pdfImage);
+    // 2. メイン画面の地図
+    this.setupZoom(this.els.mapImageScrollContainer, this.els.mapImage);
   }
 
   /**
@@ -118,6 +121,7 @@ export class UIManager {
     let startX = 0;
     let startY = 0;
     let initialDist = 0;
+    let initialScale = 1;
 
     // スタイル初期化
     container.style.overflow = "hidden";
@@ -133,6 +137,14 @@ export class UIManager {
       img.style.transform = `translate(0px, 0px) scale(1)`;
     };
 
+    // ブラウザ全体のズームを抑制する (iOS Safari対策)
+    const preventDefault = (e) => {
+      if (e.cancelable) e.preventDefault();
+    };
+
+    container.addEventListener("gesturestart", preventDefault);
+    container.addEventListener("gesturechange", preventDefault);
+
     // タッチ開始
     container.addEventListener("touchstart", (e) => {
       if (e.touches.length === 1) {
@@ -146,9 +158,10 @@ export class UIManager {
           e.touches[0].clientX - e.touches[1].clientX,
           e.touches[0].clientY - e.touches[1].clientY
         );
+        initialScale = scale;
         img.style.transition = "none";
       }
-    });
+    }, { passive: false });
 
     // タッチ移動
     container.addEventListener("touchmove", (e) => {
@@ -164,17 +177,17 @@ export class UIManager {
           e.touches[0].clientX - e.touches[1].clientX,
           e.touches[0].clientY - e.touches[1].clientY
         );
-        // 距離の変化比率でスケール変更（簡易的）
-        const diff = dist - initialDist;
-        scale += diff * 0.01;
-        initialDist = dist; // 逐次更新
+        
+        // 距離の変化比率でスケール変更
+        const zoomFactor = dist / initialDist;
+        scale = initialScale * zoomFactor;
 
         // 制限
-        scale = Math.max(0.5, Math.min(scale, 5));
+        scale = Math.max(0.8, Math.min(scale, 8));
       }
 
       img.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
-    });
+    }, { passive: false });
 
     // タッチ終了
     container.addEventListener("touchend", (e) => {
