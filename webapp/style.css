@@ -552,6 +552,10 @@ input[type="text"] {
   padding: 10px;
 }
 
+.pdf-modal {
+  z-index: 10000; /* Ensure it's above gallery-modal if both are open */
+}
+
 .pdf-modal-header {
   display: flex;
   justify-content: flex-end;
