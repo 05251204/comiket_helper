@@ -7,6 +7,7 @@ import { TspSolver } from "./tsp-solver.js";
  */
 export class UIManager {
   constructor() {
+    this.dataManager = null;
     this.els = {
       gasUrl: document.getElementById("gas-url"),
       settingsArea: document.getElementById("settings-area"),
@@ -52,6 +53,11 @@ export class UIManager {
       pdfModal: document.getElementById("pdf-modal"),
       pdfImage: document.getElementById("pdf-modal-image"),
       btnClosePdf: document.getElementById("btn-close-pdf"),
+
+      // Gallery Modal
+      galleryModal: document.getElementById("gallery-modal"),
+      galleryGrid: document.getElementById("gallery-grid"),
+      btnCloseGallery: document.getElementById("btn-close-gallery"),
     };
 
     this.toastTimer = null;
@@ -62,13 +68,55 @@ export class UIManager {
    * 初期化処理
    */
   init(dataManager) {
+    this.dataManager = dataManager;
     // 設定読み込み
     this.els.gasUrl.value = dataManager.getGasUrl();
 
     // PDF閉じるボタン
     this.els.btnClosePdf.addEventListener("click", () => this.hidePdfModal());
 
-    // セレクトボックス初期化 (EWSN)
+    // ギャラリー閉じるボタン
+    this.els.btnCloseGallery.addEventListener("click", () => this.hideGalleryModal());
+
+    // カウントセルへのイベント登録
+    const areaMap = {
+      cntE456: "東456",
+      cntE7: "東7",
+      cntW12: "西12",
+      cntS12: "南12",
+    };
+
+    Object.entries(areaMap).forEach(([key, areaName]) => {
+      if (this.els[key]) {
+        this.els[key].addEventListener("click", () => {
+          // 件数が0でない場合のみ開く（スタイルはupdateCountsで制御）
+          if (this.els[key].classList.contains("count-cell")) {
+            this.showGallery(areaName, false);
+          }
+        });
+      }
+    });
+
+    // 保留カウントセルへのイベント登録
+    const holdAreaMap = {
+      cntHoldE456: "東456",
+      cntHoldE7: "東7",
+      cntHoldW12: "西12",
+      cntHoldS12: "南12",
+    };
+
+    Object.entries(holdAreaMap).forEach(([key, areaName]) => {
+      if (this.els[key]) {
+        this.els[key].addEventListener("click", (e) => {
+          e.stopPropagation(); // 行クリックイベントへの伝播を防ぐ
+          if (this.els[key].classList.contains("count-cell")) {
+            this.showGallery(areaName, true);
+          }
+        });
+      }
+    });
+
+    // セレクトボックス初期化 (EWSN) - カスタムセレクト生成前に実行
     this.els.locEwsn.innerHTML = "";
     Object.keys(Config.LABEL_OPTIONS).forEach((key) => {
       const opt = document.createElement("option");
@@ -77,14 +125,7 @@ export class UIManager {
       this.els.locEwsn.appendChild(opt);
     });
 
-    // 初期化時はイベントリスナーを設定せず、カスタムセレクト構築後に連携させる
-    // this.els.locEwsn.addEventListener("change", ...) は setupCustomSelect 内で処理されるか、
-    // ネイティブ発火に合わせて動作するようにする
-
-    // ラベル初期化
-    this.updateLabelOptions(false); // まだカスタムセレクトはないのでfalse
-
-    // セレクトボックス初期化 (Number)
+    // セレクトボックス初期化 (Number) - カスタムセレクト生成前に実行
     this.els.locNumber.innerHTML = "";
     const numOptions = [10, 20, 30, 40, 50, 60];
     numOptions.forEach((num) => {
@@ -100,6 +141,9 @@ export class UIManager {
     });
     this.customSelects.label = this.setupCustomSelect(this.els.locLabel);
     this.customSelects.number = this.setupCustomSelect(this.els.locNumber);
+
+    // ラベル初期化 (カスタムセレクト生成後に実行してrenderをトリガー)
+    this.updateLabelOptions(true);
 
     this.renderMapLinks(); // 地図リンクの生成
     this.updateCounts(dataManager);
@@ -289,6 +333,74 @@ export class UIManager {
   }
 
   /**
+   * ギャラリーモーダルを表示
+   */
+  showGallery(areaKey, isHold = false) {
+    if (!this.dataManager) return;
+
+    let targets = [];
+    if (isHold) {
+      // 保留リストから
+      targets = this.dataManager.wantToBuy.filter((c) => {
+        if (!this.dataManager.holdList.includes(c.space)) return false;
+        const [key] = TspSolver.parseSpace(c.space);
+        return key === areaKey && c.tweet;
+      });
+    } else {
+      // 未訪問リストから
+      const unvisited = this.dataManager.getUnvisited();
+      targets = unvisited.filter((c) => {
+        const [key] = TspSolver.parseSpace(c.space);
+        return key === areaKey && c.tweet;
+      });
+    }
+
+    this.els.galleryGrid.innerHTML = "";
+
+    if (targets.length === 0) {
+      const msg = document.createElement("div");
+      msg.textContent = "お品書き画像はありません";
+      msg.style.color = "white";
+      msg.style.padding = "1rem";
+      msg.style.gridColumn = "1 / -1";
+      this.els.galleryGrid.appendChild(msg);
+    } else {
+      targets.forEach((c) => {
+        const item = document.createElement("div");
+        item.className = "gallery-item";
+        
+        const img = document.createElement("img");
+        img.src = c.tweet;
+        img.loading = "lazy";
+        
+        const name = document.createElement("div");
+        name.className = "circle-name";
+        name.textContent = c.space; // サークル名があればそっちが良いが、spaceを表示
+
+        item.appendChild(img);
+        item.appendChild(name);
+
+        item.onclick = () => {
+          // 画像をクリックしたらモーダルで開く
+          this.showPdfModal(c.tweet);
+        };
+
+        this.els.galleryGrid.appendChild(item);
+      });
+    }
+
+    this.els.galleryModal.classList.remove("hidden");
+  }
+
+  /**
+   * ギャラリーモーダルを非表示
+   */
+  hideGalleryModal() {
+    this.els.galleryModal.classList.add("hidden");
+    this.els.galleryGrid.innerHTML = "";
+  }
+
+  /**
    * カスタムセレクトボックスのセットアップ
    */
   setupCustomSelect(nativeSelect, onChangeCallback) {
@@ -418,19 +530,16 @@ export class UIManager {
     const dist = TspSolver.calcDist(startSpace, target.space);
     this.els.dist.textContent = dist >= 10000 ? "別エリア" : `距離 ${dist}`;
 
-    // Twitterリンクの生成
-    if (target.tweet) {
-      this.els.tweetLink.href = target.tweet;
-      this.els.tweetLink.style.display = "block";
-      this.els.tweetLink.innerHTML = `<i class="fa-regular fa-image"></i> Menu`;
-      this.els.tweetLink.target = "_blank";
-    } else if (target.account) {
+    // Twitterリンクの優先表示 (アカウントリンク優先)
+    if (target.account) {
       this.els.tweetLink.href = target.account;
       this.els.tweetLink.style.display = "block";
       this.els.tweetLink.innerHTML = `<i class="fa-brands fa-twitter"></i> @${target.account
         .split("/")
         .pop()}`;
+      this.els.tweetLink.target = "_blank";
     } else {
+      // アカウントがない場合はリンクを表示しない
       this.els.tweetLink.style.display = "none";
     }
 
@@ -444,7 +553,7 @@ export class UIManager {
       img.style.height = "auto";
       img.style.borderRadius = "8px";
       img.style.cursor = "pointer";
-      img.onclick = () => window.open(target.tweet, "_blank");
+      img.onclick = () => this.showPdfModal(target.tweet); // 修正: ここでもモーダルを使用
       this.els.tweetEmbed.appendChild(img);
     }
 
@@ -483,10 +592,20 @@ export class UIManager {
       if (counts[key] !== undefined) counts[key]++;
     });
 
-    this.els.cntE456.textContent = counts["東456"];
-    this.els.cntE7.textContent = counts["東7"];
-    this.els.cntW12.textContent = counts["西12"];
-    this.els.cntS12.textContent = counts["南12"];
+    const updateCell = (el, count) => {
+      if (!el) return;
+      el.textContent = count;
+      if (count > 0) {
+        el.classList.add("count-cell");
+      } else {
+        el.classList.remove("count-cell");
+      }
+    };
+
+    updateCell(this.els.cntE456, counts["東456"]);
+    updateCell(this.els.cntE7, counts["東7"]);
+    updateCell(this.els.cntW12, counts["西12"]);
+    updateCell(this.els.cntS12, counts["南12"]);
 
     // 保留数のエリア別カウント
     const holdCounts = { 東456: 0, 東7: 0, 西12: 0, 南12: 0 };
@@ -495,14 +614,10 @@ export class UIManager {
       if (holdCounts[key] !== undefined) holdCounts[key]++;
     });
 
-    if (this.els.cntHoldE456)
-      this.els.cntHoldE456.textContent = holdCounts["東456"];
-    if (this.els.cntHoldE7)
-      this.els.cntHoldE7.textContent = holdCounts["東7"];
-    if (this.els.cntHoldW12)
-      this.els.cntHoldW12.textContent = holdCounts["西12"];
-    if (this.els.cntHoldS12)
-      this.els.cntHoldS12.textContent = holdCounts["南12"];
+    updateCell(this.els.cntHoldE456, holdCounts["東456"]);
+    updateCell(this.els.cntHoldE7, holdCounts["東7"]);
+    updateCell(this.els.cntHoldW12, holdCounts["西12"]);
+    updateCell(this.els.cntHoldS12, holdCounts["南12"]);
   }
 
   /**

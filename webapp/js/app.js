@@ -76,8 +76,18 @@ class App {
     document.getElementById("btn-redo").onclick = () => this.handleRedo();
 
     document.getElementById("btn-reset-all").onclick = () => this.handleReset();
-    document.getElementById("btn-hold-list").onclick = () =>
-      this.handleResetHold();
+    
+    // 保留行のクリックイベント（ラベル部分のみでリセット発火）
+    const holdRow = document.getElementById("btn-hold-list");
+    if (holdRow) {
+      holdRow.addEventListener("click", (e) => {
+        // クリックされた要素が最初のセル（ラベル）の場合のみリセット処理を実行
+        const firstCell = holdRow.querySelector("td");
+        if (e.target === firstCell || firstCell.contains(e.target)) {
+          this.handleResetHold();
+        }
+      });
+    }
 
     // オンライン復帰時の同期
     window.addEventListener("online", () => {
