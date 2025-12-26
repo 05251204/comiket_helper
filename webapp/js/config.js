@@ -25,9 +25,9 @@ export const Config = {
     SELECTED_SHEETS: "selectedSheets",
   },
   MAP_LINKS: {
-    東456: "./maps/C106Map_e456.jpg",
-    東7: "./maps/C106Map_e7.jpg",
-    西12: "./maps/C106Map_w12.jpg",
-    南12: "./maps/C106Map_s12.jpg",
+    東456: "./maps/C107Map_e456.jpg",
+    東7: "./maps/C107Map_e7.jpg",
+    西12: "./maps/C107Map_w12.jpg",
+    南12: "./maps/C107Map_s12.jpg",
   },
 };

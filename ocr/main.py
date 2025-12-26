@@ -1,6 +1,26 @@
 import cv2
 import numpy as np
 
+def is_slanted(approx, threshold=10):
+    """
+    矩形が斜めかどうかを判定する関数
+    :param approx: 頂点座標 (4点)
+    :param threshold: 許容する傾き (度)
+    :return: True if slanted, False otherwise
+    """
+    rect = cv2.minAreaRect(approx)
+    angle = rect[-1]
+    
+    # 角度を正規化 (0-90度)
+    angle = abs(angle) % 90
+    
+    if angle > 45:
+        deviation = 90 - angle
+    else:
+        deviation = angle
+        
+    return deviation > threshold
+
 def detect_space_boxes(image_path, output_path):
     # 1. 画像の読み込み
     img = cv2.imread(image_path)
@@ -8,24 +28,17 @@ def detect_space_boxes(image_path, output_path):
         print("エラー: 画像が見つかりませんでした。")
         return
     
+    height, width = img.shape[:2]
     output_img = img.copy() # 結果描画用の画像
 
     # 2. 前処理 (グレースケール化 -> 二値化)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     
-    # 適応的閾値処理（Adaptive Thresholding）
-    # 照明ムラがあっても線を綺麗に抽出しやすい方法です。
-    # パラメータ(11, 2)は画像の線の太さやコントラストによって調整が必要な場合があります。
+    # 適応的閾値処理
     binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                    cv2.THRESH_BINARY_INV, 11, 2)
 
-    # ノイズ除去（省略可ですが、あると精度が上がることがあります）
-    # kernel = np.ones((2,2), np.uint8)
-    # binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
-
     # 3. 輪郭の検出
-    # RETR_LIST: すべての輪郭を取得
-    # CHAIN_APPROX_SIMPLE: 輪郭の情報を圧縮して保持
     contours, _ = cv2.findContours(binary, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
     print(f"検出された全輪郭数: {len(contours)}")
@@ -34,65 +47,74 @@ def detect_space_boxes(image_path, output_path):
 
     # 4. 候補の選定（一次フィルタリング）
     for cnt in contours:
-        # 輪郭を直線で近似する
-        # epsilonの値が大きいほど大雑把な近似になります。
-        # 0.03だと強すぎて四角形として認識されない場合があるため、0.02に緩和します。
         epsilon = 0.02 * cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, epsilon, True)
 
         # 条件A: 頂点数が4つ（四角形であること）
         if len(approx) == 4:
-            # 外接矩形の情報を取得 (x, y, 幅, 高さ)
             x, y, w, h = cv2.boundingRect(cnt)
-            aspect_ratio = float(w) / h # アスペクト比（横長度合い）
-            area = cv2.contourArea(cnt) # 面積
-
-            # --- フィルタリング条件の調整ポイント ---
-            # 実際の画像の解像度に合わせて、ここの数値を調整する必要があります。
+            aspect_ratio = float(w) / h 
+            area = cv2.contourArea(cnt)
             
+            # ボックスの中心Y座標を計算
+            center_y = y + h / 2
+
             # 条件B: 面積（サイズ）のフィルタリング
-            # 極端に小さいゴミ(300以下)を除外します。
-            # 上限は後で統計的に処理するためここでは緩くしておきます。
             if area > 300:
-                
-                # 条件C: アスペクト比（形状）のフィルタリング
-                # 長方形（縦長・横長問わず）を対象とします。
+                # 条件C: アスペクト比
                 if 0.15 < aspect_ratio < 6.0:
-                    
-                    # 条件D: 矩形らしさ（Solidity）のチェック
-                    # 輪郭の面積と外接矩形の面積の比率を確認し、中身が詰まった矩形か判定します。
                     rect_area = w * h
                     solidity = float(area) / rect_area
                     
-                    # さらに条件を緩和: 0.5 -> 0.3
+                    # 条件D: Solidity
                     if solidity > 0.3:
-                        
-                        # 条件E: 幅と高さの絶対値でのフィルタリング
+                        # 条件E: 絶対サイズ
                         if w > 20 and h > 20:
+                            
+                            # 条件F: 斜め判定
+                            if is_slanted(approx, threshold=10):
+                                continue # 斜めの場合はスキップ
+
+                            # ここではまだ下部の除外は行わない（分布を見るため）
+
                             candidates.append({
                                 'approx': approx,
-                                'area': area
+                                'area': area,
+                                'center_y': center_y
                             })
 
-    # 5. 動的な面積フィルタリング（外れ値の除外）
-    detected_boxes = []
+    # 5. 位置によるフィルタリング (下位1%の除外)
+    # 検出されたボックスの中で、Y座標が極端に大きい（下にある）ものを除外
+    valid_candidates = []
     if candidates:
-        areas = [c['area'] for c in candidates]
+        y_coords = [c['center_y'] for c in candidates]
+        # Y座標の99パーセンタイル（下位1%の境界線）を計算
+        # これより下（数値が大きい）にあるボックスは除外
+        bottom_limit = np.percentile(y_coords, 99)
+        
+        print(f"Y座標のカットライン (下位1%): {bottom_limit:.1f}")
+        
+        for c in candidates:
+            if c['center_y'] <= bottom_limit:
+                valid_candidates.append(c)
+            else:
+                pass # 最下部のゴミを除外
+
+    # 6. 動的な面積フィルタリング（外れ値の除外）
+    detected_boxes = []
+    if valid_candidates:
+        areas = [c['area'] for c in valid_candidates]
         median_area = np.median(areas)
         print(f"面積の中央値: {median_area}")
 
-        for c in candidates:
+        for c in valid_candidates:
             area = c['area']
-            # 「若干でも大きいもの」を除外するため、中央値の1.5倍を上限に設定
             if area < median_area * 1.5: 
                 detected_boxes.append(c['approx'])
-            else:
-                pass # 少しでも大きい枠を除外
 
     print(f"条件を通過したボックス数: {len(detected_boxes)}")
 
-    # 6. 結果の描画
-    # 見つかった輪郭を緑色(0, 255, 0)、太さ2で描画
+    # 7. 結果の描画
     cv2.drawContours(output_img, detected_boxes, -1, (0, 255, 0), 2)
     
     # 保存
