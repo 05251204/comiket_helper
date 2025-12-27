@@ -16,7 +16,7 @@ class App {
    * 初期化実行
    */
   init() {
-    this.ui.init(this.dm);
+    this.ui.init(this.dm, (circle) => this.handleSetNextTarget(circle));
     this.setupEvents();
 
     // 未送信キューの処理を試行
@@ -29,6 +29,19 @@ class App {
       // URLがあるなら自動更新トライ
       this.refreshData();
     }
+  }
+
+  /**
+   * 手動で目的地を設定
+   */
+  handleSetNextTarget(circle) {
+    if (!circle) return;
+    this.currentTarget = circle;
+    // 現在地をそのサークルの場所に更新
+    this.ui.updateCurrentLocation(circle.space);
+    // 目的地として表示
+    this.ui.showTarget(this.currentTarget, circle.space, null);
+    this.ui.showToast(`目的地を ${circle.space} に設定しました`);
   }
 
   /**

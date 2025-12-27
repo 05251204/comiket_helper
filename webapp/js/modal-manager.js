@@ -9,13 +9,24 @@ export class ModalManager {
       pdfImage: document.getElementById("pdf-modal-image"),
       btnClosePdf: document.getElementById("btn-close-pdf"),
       modalImageContainer: document.getElementById("modal-image-container"),
+      btnSetTarget: document.getElementById("btn-set-target"), // 新しいボタン
 
       galleryModal: document.getElementById("gallery-modal"),
       galleryGrid: document.getElementById("gallery-grid"),
       btnCloseGallery: document.getElementById("btn-close-gallery"),
     };
 
+    this.onSetNextTarget = null;
+    this.currentCircle = null;
+
     this.init();
+  }
+
+  /**
+   * 目的地設定コールバックを登録
+   */
+  setOnSetNextTargetCallback(callback) {
+    this.onSetNextTarget = callback;
   }
 
   /**
@@ -29,6 +40,16 @@ export class ModalManager {
       this.els.btnCloseGallery.addEventListener("click", () => this.hideGalleryModal());
     }
 
+    if (this.els.btnSetTarget) {
+      this.els.btnSetTarget.addEventListener("click", () => {
+        if (this.onSetNextTarget && this.currentCircle) {
+          this.onSetNextTarget(this.currentCircle);
+          this.hidePdfModal();
+          this.hideGalleryModal(); // ギャラリーも閉じる
+        }
+      });
+    }
+
     if (this.els.modalImageContainer && this.els.pdfImage) {
       this.setupZoom(this.els.modalImageContainer, this.els.pdfImage);
     }
@@ -36,10 +57,25 @@ export class ModalManager {
 
   /**
    * PDF(画像)モーダルを表示
-   * @param {string} url - 画像URL
+   * @param {string|Object} source - 画像URL または サークルデータオブジェクト
    */
-  showPdfModal(url) {
+  showPdfModal(source) {
     if (!this.els.pdfModal || !this.els.pdfImage) return;
+
+    let url = "";
+    this.currentCircle = null;
+
+    if (typeof source === "string") {
+      // URL文字列の場合 (地図など)
+      url = source;
+      this.els.btnSetTarget.style.display = "none";
+    } else if (source && typeof source === "object") {
+      // サークルデータの場合
+      url = source.tweet;
+      this.currentCircle = source;
+      this.els.btnSetTarget.style.display = "block";
+    }
+
     this.els.pdfModal.classList.remove("hidden");
     this.els.pdfImage.src = url;
     if (this.els.pdfImage.resetZoom) {
@@ -54,6 +90,7 @@ export class ModalManager {
     if (!this.els.pdfModal || !this.els.pdfImage) return;
     this.els.pdfModal.classList.add("hidden");
     this.els.pdfImage.src = "";
+    this.currentCircle = null;
   }
 
   /**
@@ -77,20 +114,37 @@ export class ModalManager {
         const item = document.createElement("div");
         item.className = "gallery-item";
         
-        const img = document.createElement("img");
-        img.src = c.tweet;
-        img.loading = "lazy";
+        if (c.tweet) {
+            const img = document.createElement("img");
+            img.loading = "lazy";
+            
+            // 画像読み込み後にアスペクト比を判定してクラス付与
+            img.onload = function() {
+              if (this.naturalWidth > this.naturalHeight) {
+                item.classList.add("wide");
+              }
+            };
+            
+            // src設定はonloadの後に行う (キャッシュ対策)
+            img.src = c.tweet;
+            item.appendChild(img);
+
+            item.onclick = () => {
+              // オブジェクトごと渡す
+              this.showPdfModal(c);
+            };
+        } else {
+            const placeholder = document.createElement("div");
+            placeholder.className = "no-image-placeholder";
+            placeholder.innerHTML = '<i class="fa-regular fa-image"></i><span>No Image</span>';
+            item.appendChild(placeholder);
+        }
         
         const name = document.createElement("div");
         name.className = "circle-name";
         name.textContent = c.space;
 
-        item.appendChild(img);
         item.appendChild(name);
-
-        item.onclick = () => {
-          this.showPdfModal(c.tweet);
-        };
 
         this.els.galleryGrid.appendChild(item);
       });

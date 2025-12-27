@@ -59,7 +59,7 @@ export class TspSolver {
     const numDist = Math.abs(num1 - num2);
 
     // 縦移動(label)のコストを重めに見積もる
-    return labelDist * 10 + numDist;
+    return labelDist * 7 + numDist;
   }
 
   /**
