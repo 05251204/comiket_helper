@@ -1,0 +1,34 @@
+{
+  "name": "pebble",
+  "author": "MakeAwesomeHappen",
+  "version": "1.0.0",
+  "keywords": [
+    "pebble-app"
+  ],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "pebble",
+    "uuid": "4efb953c-df55-4ed4-9cc3-95a32e0c69cf",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk",
+      "diorite"
+    ],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": {
+      "KEY_LOCATION": 0,
+      "KEY_NAME": 1,
+      "KEY_STATS": 2,
+      "KEY_ACTION": 3
+    },
+    "resources": {
+      "media": []
+    }
+  }
+}
