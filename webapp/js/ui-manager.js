@@ -62,10 +62,17 @@ export class UIManager {
       galleryModal: document.getElementById("gallery-modal"),
       galleryGrid: document.getElementById("gallery-grid"),
       btnCloseGallery: document.getElementById("btn-close-gallery"),
+      
+      // Sort buttons
+      btnSortSpace: document.getElementById("btn-sort-space"),
+      btnSortPriority: document.getElementById("btn-sort-priority"),
     };
 
     this.toastTimer = null;
     this.customSelects = {}; // カスタムセレクトの制御インスタンス保持用
+    
+    this.gallerySortMode = 'space'; // 'space' | 'priority'
+    this.galleryTargets = [];
   }
 
   /**
@@ -74,6 +81,10 @@ export class UIManager {
   init(dataManager, onSetNextTarget) {
     this.dataManager = dataManager;
     this.onSetNextTarget = onSetNextTarget;
+
+    // 要素の再取得（安全のため）
+    this.els.btnSortSpace = document.getElementById("btn-sort-space");
+    this.els.btnSortPriority = document.getElementById("btn-sort-priority");
 
     // 設定読み込み
     this.els.gasUrl.value = dataManager.getGasUrl();
@@ -94,6 +105,14 @@ export class UIManager {
 
     // ギャラリー閉じるボタン
     this.els.btnCloseGallery.addEventListener("click", () => this.hideGalleryModal());
+    
+    // ギャラリーソートボタン
+    if (this.els.btnSortSpace) {
+      this.els.btnSortSpace.onclick = () => this.changeGallerySort('space'); // addEventListenerよりonclickで上書き推奨
+    }
+    if (this.els.btnSortPriority) {
+      this.els.btnSortPriority.onclick = () => this.changeGallerySort('priority');
+    }
 
     // カウントセルへのイベント登録
     const areaMap = {
@@ -366,6 +385,49 @@ export class UIManager {
   }
 
   /**
+   * ギャラリーのソートモードを変更
+   */
+  changeGallerySort(mode) {
+    if (this.gallerySortMode === mode) return;
+    this.gallerySortMode = mode;
+    this.renderGallery();
+  }
+
+  /**
+   * ターゲットリストを現在のモードでソート
+   */
+  sortTargets(targets) {
+    const sorted = [...targets];
+    
+    // Helper to get priority value (Integers, larger is higher)
+    const getPriorityVal = (p) => {
+      // 数値としてパースしてみる
+      const val = Number(p);
+      // 数値であればそれを返す。そうでなければ（空文字や文字列など）0を返す
+      return isNaN(val) ? 0 : val;
+    };
+
+    sorted.sort((a, b) => {
+      if (this.gallerySortMode === 'priority') {
+        const pA = getPriorityVal(a.priority);
+        const pB = getPriorityVal(b.priority);
+        if (pA !== pB) return pB - pA; // Descending (大きい順)
+      }
+      
+      // Secondary sort (or primary if mode is 'space'): Space order
+      const [h1, l1, n1] = TspSolver.parseSpace(a.space);
+      const [h2, l2, n2] = TspSolver.parseSpace(b.space);
+
+      // 通常は同じエリアだが、念のため
+      if (h1 !== h2) return h1.localeCompare(h2);
+      if (l1 !== l2) return l1.localeCompare(l2);
+      return n1 - n2;
+    });
+
+    return sorted;
+  }
+
+  /**
    * ギャラリーモーダルを表示
    */
   showGallery(areaKey, isHold = false) {
@@ -387,7 +449,26 @@ export class UIManager {
         return key === areaKey;
       });
     }
+    
+    this.galleryTargets = targets;
+    this.renderGallery();
+    this.els.galleryModal.classList.remove("hidden");
+  }
 
+  /**
+   * ギャラリーの描画（ソート適用）
+   */
+  renderGallery() {
+    // ボタンの状態更新
+    if (this.gallerySortMode === 'space') {
+      this.els.btnSortSpace.classList.add('active');
+      this.els.btnSortPriority.classList.remove('active');
+    } else {
+      this.els.btnSortSpace.classList.remove('active');
+      this.els.btnSortPriority.classList.add('active');
+    }
+
+    const targets = this.sortTargets(this.galleryTargets);
     this.els.galleryGrid.innerHTML = "";
 
     if (targets.length === 0) {
@@ -441,8 +522,6 @@ export class UIManager {
         this.els.galleryGrid.appendChild(item);
       });
     }
-
-    this.els.galleryModal.classList.remove("hidden");
   }
 
   /**

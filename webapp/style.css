@@ -558,8 +558,39 @@ input[type="text"] {
 
 .pdf-modal-header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between; /* 変更: 両端揃えに */
+  align-items: center; /* 追加: 垂直中央揃え */
   margin-bottom: 8px;
+}
+
+.gallery-sort-controls {
+  display: flex;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.sort-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #ccc;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: bold;
+}
+
+.sort-btn:hover {
+  color: white;
+}
+
+.sort-btn.active {
+  background: white;
+  color: #333;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 .btn-close-modal {
@@ -574,6 +605,7 @@ input[type="text"] {
   font-size: 1.2rem;
   color: #333;
   cursor: pointer;
+  margin-left: auto; /* 右寄せを強制する場合 */
 }
 
 .pdf-container {

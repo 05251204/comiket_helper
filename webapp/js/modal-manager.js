@@ -1,3 +1,5 @@
+import { TspSolver } from "./tsp-solver.js";
+
 /**
  * モーダル管理クラス
  * PDF（画像）モーダルおよびギャラリーモーダルの制御を担当
@@ -14,10 +16,18 @@ export class ModalManager {
       galleryModal: document.getElementById("gallery-modal"),
       galleryGrid: document.getElementById("gallery-grid"),
       btnCloseGallery: document.getElementById("btn-close-gallery"),
+
+      // Sort buttons
+      btnSortSpace: document.getElementById("btn-sort-space"),
+      btnSortPriority: document.getElementById("btn-sort-priority"),
     };
 
     this.onSetNextTarget = null;
     this.currentCircle = null;
+    
+    // Gallery state
+    this.currentTargets = [];
+    this.sortMode = 'space'; // 'space' | 'priority'
 
     this.init();
   }
@@ -53,6 +63,67 @@ export class ModalManager {
     if (this.els.modalImageContainer && this.els.pdfImage) {
       this.setupZoom(this.els.modalImageContainer, this.els.pdfImage);
     }
+
+    // Sort buttons events
+    if (this.els.btnSortSpace) {
+      this.els.btnSortSpace.addEventListener("click", () => this.changeSortMode('space'));
+    }
+    if (this.els.btnSortPriority) {
+      this.els.btnSortPriority.addEventListener("click", () => this.changeSortMode('priority'));
+    }
+  }
+
+  /**
+   * ソートモードを変更して再描画
+   */
+  changeSortMode(mode) {
+    if (this.sortMode === mode) return;
+    this.sortMode = mode;
+
+    // UI update
+    if (mode === 'space') {
+      this.els.btnSortSpace.classList.add('active');
+      this.els.btnSortPriority.classList.remove('active');
+    } else {
+      this.els.btnSortSpace.classList.remove('active');
+      this.els.btnSortPriority.classList.add('active');
+    }
+
+    this.renderGallery();
+  }
+
+  /**
+   * ターゲットリストを現在のモードでソート
+   */
+  sortTargets(targets) {
+    const sorted = [...targets];
+    
+    // Helper to get priority value (High > Normal > Low > others)
+    const getPriorityVal = (p) => {
+      const val = (p || "").toLowerCase();
+      if (val === "high") return 3;
+      if (val === "normal") return 2;
+      if (val === "low") return 1;
+      return 0;
+    };
+
+    sorted.sort((a, b) => {
+      if (this.sortMode === 'priority') {
+        const pA = getPriorityVal(a.priority);
+        const pB = getPriorityVal(b.priority);
+        if (pA !== pB) return pB - pA; // Descending
+      }
+      
+      // Secondary sort (or primary if mode is 'space'): Space order
+      const [h1, l1, n1] = TspSolver.parseSpace(a.space);
+      const [h2, l2, n2] = TspSolver.parseSpace(b.space);
+
+      if (h1 !== h2) return h1.localeCompare(h2); // Should be same area usually, but just in case
+      if (l1 !== l2) return l1.localeCompare(l2);
+      return n1 - n2;
+    });
+
+    return sorted;
   }
 
   /**
@@ -99,8 +170,28 @@ export class ModalManager {
    */
   showGallery(targets) {
     if (!this.els.galleryModal || !this.els.galleryGrid) return;
+    
+    this.currentTargets = targets || [];
+    // Reset sort mode to default or keep previous? Keeping previous is usually better UX.
+    // Ensure UI matches state (e.g. if page reloaded)
+    if (this.sortMode === 'space') {
+       this.els.btnSortSpace.classList.add('active');
+       this.els.btnSortPriority.classList.remove('active');
+    } else {
+       this.els.btnSortSpace.classList.remove('active');
+       this.els.btnSortPriority.classList.add('active');
+    }
 
+    this.renderGallery();
+    this.els.galleryModal.classList.remove("hidden");
+  }
+
+  /**
+   * ギャラリーの中身を描画
+   */
+  renderGallery() {
     this.els.galleryGrid.innerHTML = "";
+    const targets = this.sortTargets(this.currentTargets);
 
     if (targets.length === 0) {
       const msg = document.createElement("div");
@@ -149,8 +240,6 @@ export class ModalManager {
         this.els.galleryGrid.appendChild(item);
       });
     }
-
-    this.els.galleryModal.classList.remove("hidden");
   }
 
   /**
