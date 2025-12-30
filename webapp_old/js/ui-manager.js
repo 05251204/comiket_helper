@@ -1,6 +1,5 @@
 import { Config } from "./config.js";
 import { TspSolver } from "./tsp-solver.js";
-import { StatsRenderer } from "./stats-renderer.js";
 
 /**
  * UI管理クラス
@@ -11,7 +10,6 @@ export class UIManager {
     this.dataManager = null;
     this.onSetNextTarget = null; // コールバック
     this.currentCircle = null;   // モーダルで表示中の対象
-    this.statsRenderer = new StatsRenderer(this);
 
     this.els = {
       gasUrl: document.getElementById("gas-url"),
@@ -65,24 +63,16 @@ export class UIManager {
       galleryGrid: document.getElementById("gallery-grid"),
       btnCloseGallery: document.getElementById("btn-close-gallery"),
       
-      // Gallery Map
-      galleryMapContainer: document.getElementById("gallery-map-container"),
-      galleryMapHeader: document.getElementById("gallery-map-header"), // 追加
-      galleryMapImage: document.getElementById("gallery-map-image"),
-      galleryMapScroll: document.getElementById("gallery-map-scroll"),
-      
-      // Undo button
-      btnGalleryUndo: document.getElementById("btn-gallery-undo"),
+      // Sort buttons
+      btnSortSpace: document.getElementById("btn-sort-space"),
+      btnSortPriority: document.getElementById("btn-sort-priority"),
     };
 
     this.toastTimer = null;
     this.customSelects = {}; // カスタムセレクトの制御インスタンス保持用
     
-    // Gallery state
+    this.gallerySortMode = 'space'; // 'space' | 'priority'
     this.galleryTargets = [];
-    this.currentGalleryArea = null;
-    this.currentGalleryIsHold = false;
-    this.activePriorities = [10, 9, 8, 7]; // Default all active
   }
 
   /**
@@ -93,7 +83,8 @@ export class UIManager {
     this.onSetNextTarget = onSetNextTarget;
 
     // 要素の再取得（安全のため）
-    this.els.btnGalleryUndo = document.getElementById("btn-gallery-undo");
+    this.els.btnSortSpace = document.getElementById("btn-sort-space");
+    this.els.btnSortPriority = document.getElementById("btn-sort-priority");
 
     // 設定読み込み
     this.els.gasUrl.value = dataManager.getGasUrl();
@@ -115,22 +106,51 @@ export class UIManager {
     // ギャラリー閉じるボタン
     this.els.btnCloseGallery.addEventListener("click", () => this.hideGalleryModal());
     
-    // ギャラリーフィルターボタン設定
-    const filterBtns = document.querySelectorAll('#gallery-filter-controls .filter-btn');
-    filterBtns.forEach(btn => {
-        btn.onclick = () => {
-            const p = parseInt(btn.dataset.priority);
-            this.togglePriorityFilter(p, btn);
-        };
-    });
-    
-    // ギャラリーUndoボタン
-    if (this.els.btnGalleryUndo) {
-      this.els.btnGalleryUndo.onclick = () => this.handleGalleryUndo();
+    // ギャラリーソートボタン
+    if (this.els.btnSortSpace) {
+      this.els.btnSortSpace.onclick = () => this.changeGallerySort('space'); // addEventListenerよりonclickで上書き推奨
+    }
+    if (this.els.btnSortPriority) {
+      this.els.btnSortPriority.onclick = () => this.changeGallerySort('priority');
     }
 
-    // 統計情報の初期化
-    this.statsRenderer.init();
+    // カウントセルへのイベント登録
+    const areaMap = {
+      cntE456: "東456",
+      cntE7: "東7",
+      cntW12: "西12",
+      cntS12: "南12",
+    };
+
+    Object.entries(areaMap).forEach(([key, areaName]) => {
+      if (this.els[key]) {
+        this.els[key].addEventListener("click", () => {
+          // 件数が0でない場合のみ開く（スタイルはupdateCountsで制御）
+          if (this.els[key].classList.contains("count-cell")) {
+            this.showGallery(areaName, false);
+          }
+        });
+      }
+    });
+
+    // 保留カウントセルへのイベント登録
+    const holdAreaMap = {
+      cntHoldE456: "東456",
+      cntHoldE7: "東7",
+      cntHoldW12: "西12",
+      cntHoldS12: "南12",
+    };
+
+    Object.entries(holdAreaMap).forEach(([key, areaName]) => {
+      if (this.els[key]) {
+        this.els[key].addEventListener("click", (e) => {
+          e.stopPropagation(); // 行クリックイベントへの伝播を防ぐ
+          if (this.els[key].classList.contains("count-cell")) {
+            this.showGallery(areaName, true);
+          }
+        });
+      }
+    });
 
     // セレクトボックス初期化 (EWSN) - カスタムセレクト生成前に実行
     this.els.locEwsn.innerHTML = "";
@@ -169,130 +189,11 @@ export class UIManager {
     this.setupZoom(document.getElementById("modal-image-container"), this.els.pdfImage);
     // 2. メイン画面の地図
     this.setupZoom(this.els.mapImageScrollContainer, this.els.mapImage);
-    // 3. ギャラリー画面の地図
-    if (this.els.galleryMapScroll && this.els.galleryMapImage) {
-      this.setupZoom(this.els.galleryMapScroll, this.els.galleryMapImage);
-    }
-    
-    // ギャラリー地図のリサイズ機能初期化
-    if (this.els.galleryMapContainer && this.els.galleryMapHeader) {
-      this.setupResizableMap(this.els.galleryMapContainer, this.els.galleryMapHeader);
-    }
-  }
-
-  // (setupResizableMap, setupZoom methods...)
-
-  // (renderMapLinks, renderSheetList, getSelectedSheetsFromUI, showPdfModal, hidePdfModal methods...)
-
-  /**
-   * 優先度フィルターの切り替え
-   */
-  togglePriorityFilter(priority, btnElement) {
-    if (this.activePriorities.includes(priority)) {
-      this.activePriorities = this.activePriorities.filter(p => p !== priority);
-      btnElement.classList.remove('active');
-    } else {
-      this.activePriorities.push(priority);
-      btnElement.classList.add('active');
-    }
-    this.renderGallery();
-  }
-
-  /**
-   * ターゲットリストをフィルタリング＆ソート（常にスペース順）
-   */
-  sortTargets(targets) {
-    // 1. Filter
-    const filtered = targets.filter(c => {
-      // 優先度を数値化
-      const pVal = Number(c.priority);
-      const priority = isNaN(pVal) ? 0 : pVal;
-      // 選択された優先度に含まれるかチェック
-      return this.activePriorities.includes(priority);
-    });
-
-    // 2. Sort by Space
-    const sorted = filtered.sort((a, b) => {
-      const [h1, l1, n1] = TspSolver.parseSpace(a.space);
-      const [h2, l2, n2] = TspSolver.parseSpace(b.space);
-
-      if (h1 !== h2) return h1.localeCompare(h2);
-      if (l1 !== l2) return l1.localeCompare(l2);
-      return n1 - n2;
-    });
-
-    return sorted;
-  }
-
-  /**
-   * ギャラリー地図のリサイズ機能を設定
-   */
-  setupResizableMap(container, header) {
-    let startY = 0;
-    let startHeight = 0;
-    let isResizing = false;
-
-    const onStart = (clientY) => {
-      isResizing = true;
-      startY = clientY;
-      startHeight = container.getBoundingClientRect().height;
-      container.classList.add('resizing');
-    };
-
-    const onMove = (clientY) => {
-      if (!isResizing) return;
-      const deltaY = startY - clientY; // 上に動かすとdeltaはプラス
-      const newHeight = startHeight + deltaY;
-      
-      // CSSのmin/max-heightに従うのでここでは値をセットするだけで良いが、
-      // 念の為範囲制限してもよい
-      container.style.height = `${newHeight}px`;
-    };
-
-    const onEnd = () => {
-      if (isResizing) {
-        isResizing = false;
-        container.classList.remove('resizing');
-      }
-    };
-
-    // Touch events
-    header.addEventListener('touchstart', (e) => {
-      e.preventDefault(); // スクロール防止
-      if (e.touches.length === 1) {
-        onStart(e.touches[0].clientY);
-      }
-    }, { passive: false });
-
-    document.addEventListener('touchmove', (e) => {
-      if (isResizing && e.touches.length === 1) {
-        // e.preventDefault(); // 必要なら
-        onMove(e.touches[0].clientY);
-      }
-    }, { passive: false });
-
-    document.addEventListener('touchend', onEnd);
-
-    // Mouse events (for desktop testing)
-    header.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      onStart(e.clientY);
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (isResizing) {
-        e.preventDefault();
-        onMove(e.clientY);
-      }
-    });
-
-    document.addEventListener('mouseup', onEnd);
   }
 
   /**
    * 画像のピンチズーム・パン機能を設定
    */
-
   setupZoom(container, img) {
     let scale = 1;
     let pointX = 0;
@@ -532,10 +433,6 @@ export class UIManager {
   showGallery(areaKey, isHold = false) {
     if (!this.dataManager) return;
 
-    // 状態を保存
-    this.currentGalleryArea = areaKey;
-    this.currentGalleryIsHold = isHold;
-
     let targets = [];
     if (isHold) {
       // 保留リストから
@@ -553,24 +450,6 @@ export class UIManager {
       });
     }
     
-    // 地図表示処理
-    if (this.els.galleryMapContainer && this.els.galleryMapImage) {
-      if (Config.MAP_LINKS && Config.MAP_LINKS[areaKey]) {
-        const url = Config.MAP_LINKS[areaKey];
-        // 同じURLならリロードしない
-        if (this.els.galleryMapImage.getAttribute("src") !== url) {
-          this.els.galleryMapImage.src = url;
-        }
-        this.els.galleryMapContainer.classList.remove("hidden");
-        // ズームリセット
-        if (this.els.galleryMapImage.resetZoom) {
-          this.els.galleryMapImage.resetZoom();
-        }
-      } else {
-        this.els.galleryMapContainer.classList.add("hidden");
-      }
-    }
-    
     this.galleryTargets = targets;
     this.renderGallery();
     this.els.galleryModal.classList.remove("hidden");
@@ -581,14 +460,12 @@ export class UIManager {
    */
   renderGallery() {
     // ボタンの状態更新
-    if (this.els.btnSortSpace && this.els.btnSortPriority) {
-      if (this.gallerySortMode === 'space') {
-        this.els.btnSortSpace.classList.add('active');
-        this.els.btnSortPriority.classList.remove('active');
-      } else {
-        this.els.btnSortSpace.classList.remove('active');
-        this.els.btnSortPriority.classList.add('active');
-      }
+    if (this.gallerySortMode === 'space') {
+      this.els.btnSortSpace.classList.add('active');
+      this.els.btnSortPriority.classList.remove('active');
+    } else {
+      this.els.btnSortSpace.classList.remove('active');
+      this.els.btnSortPriority.classList.add('active');
     }
 
     const targets = this.sortTargets(this.galleryTargets);
@@ -636,154 +513,14 @@ export class UIManager {
             };
         }
         
-        // サークル情報コンテナ
-        const info = document.createElement("div");
-        info.className = "circle-info";
-
         const name = document.createElement("div");
         name.className = "circle-name";
-        // 優先度を表示に追加 (例: "東A01a [5]")
-        const priorityVal = Number(c.priority);
-        const prioritySpan = !isNaN(priorityVal) && priorityVal > 0 ? `<span class="gallery-priority"><i class="fa-solid fa-star"></i>${priorityVal}</span>` : "";
-        name.innerHTML = `${c.space}${prioritySpan}`; 
-        info.appendChild(name);
+        name.textContent = c.space; 
 
-        // 購入ボタン
-        const buyBtn = document.createElement("button");
-        buyBtn.className = "gallery-btn-buy";
-        buyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
-        buyBtn.onclick = (e) => {
-            e.stopPropagation(); // 画像クリック（拡大）を防ぐ
-            this.handleGalleryPurchase(c);
-        };
-        info.appendChild(buyBtn);
-
-        item.appendChild(info);
-
-        // スワイプアクションの設定
-        this.setupSwipeAction(item, () => {
-            this.handleGalleryPurchase(c);
-        });
+        item.appendChild(name);
 
         this.els.galleryGrid.appendChild(item);
       });
-    }
-  }
-
-  /**
-   * スワイプアクションの設定
-   */
-  setupSwipeAction(element, callback) {
-    let startX = 0;
-    let startY = 0;
-    let currentX = 0;
-    let isSwiping = false;
-    const threshold = 100; // アクション発火閾値
-
-    element.addEventListener('touchstart', (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      currentX = 0;
-      isSwiping = false;
-      element.style.transition = 'none';
-    }, { passive: true });
-
-    element.addEventListener('touchmove', (e) => {
-      const x = e.touches[0].clientX;
-      const y = e.touches[0].clientY;
-      const deltaX = x - startX;
-      const deltaY = y - startY;
-
-      // 縦スクロール判定
-      if (!isSwiping && Math.abs(deltaY) > Math.abs(deltaX)) {
-        return; 
-      }
-
-      // 横スワイプ開始
-      if (!isSwiping && Math.abs(deltaX) > 10) {
-        isSwiping = true;
-      }
-
-      if (isSwiping) {
-        if (e.cancelable) e.preventDefault();
-        currentX = deltaX;
-        element.style.transform = `translateX(${deltaX}px)`;
-        
-        // 視覚的フィードバック
-        if (Math.abs(deltaX) > threshold) {
-            element.style.opacity = '0.6';
-        } else {
-            element.style.opacity = '1';
-        }
-      }
-    }, { passive: false });
-
-    element.addEventListener('touchend', () => {
-      element.style.transition = 'transform 0.3s ease-out, opacity 0.3s';
-      element.style.opacity = '1';
-
-      if (isSwiping) {
-        if (Math.abs(currentX) > threshold) {
-          // スワイプ成功 -> 画面外へ飛ばしてから処理
-          const direction = currentX > 0 ? 1 : -1;
-          element.style.transform = `translateX(${direction * 100}%)`;
-          setTimeout(() => {
-             callback(); 
-             // もしキャンセルされた場合に戻す処理が必要なら、ここでgalleryTargetsの状態を見る
-             setTimeout(() => {
-                 if (element.parentNode) element.style.transform = ''; // まだ存在してれば戻す
-             }, 500);
-          }, 50);
-        } else {
-          element.style.transform = '';
-        }
-      }
-      isSwiping = false;
-    });
-  }
-
-  /**
-   * ギャラリーからの購入処理
-   */
-  handleGalleryPurchase(circle) {
-    if (!this.dataManager) return;
-    
-    const space = circle.space;
-    // 確認ダイアログなしで即座に実行
-    this.dataManager.addPurchased(space);
-    this.dataManager.syncUpdate(space);
-    this.showToast(`${space} 購入完了`);
-    
-    // ギャラリーデータを更新（購入済みを除外）して再描画
-    this.galleryTargets = this.galleryTargets.filter(c => c.space !== space);
-    this.renderGallery();
-    
-    // メイン画面のカウントも更新
-    this.updateCounts(this.dataManager);
-  }
-
-  /**
-   * ギャラリー内でのUndo操作
-   */
-  handleGalleryUndo() {
-    if (!this.dataManager) return;
-
-    const action = this.dataManager.undoLastAction();
-    if (action) {
-      if (action.type === "purchase") {
-        this.dataManager.syncUpdate(action.space, true); // Undo送信
-      }
-      this.showToast(`${action.space} の操作を取り消しました`);
-      
-      // メイン画面のカウント更新
-      this.updateCounts(this.dataManager);
-
-      // ギャラリーの再描画（直前のエリア状態を復元）
-      if (this.currentGalleryArea) {
-          this.showGallery(this.currentGalleryArea, this.currentGalleryIsHold);
-      }
-    } else {
-      this.showToast("履歴がありません");
     }
   }
 
@@ -979,9 +716,40 @@ export class UIManager {
    * 残り件数の更新
    */
   updateCounts(dm) {
-    if (this.statsRenderer) {
-      this.statsRenderer.updateCounts(dm);
-    }
+    const unvisited = dm.getUnvisited();
+    const counts = { 東456: 0, 東7: 0, 西12: 0, 南12: 0 };
+
+    unvisited.forEach((c) => {
+      const [key] = TspSolver.parseSpace(c.space);
+      if (counts[key] !== undefined) counts[key]++;
+    });
+
+    const updateCell = (el, count) => {
+      if (!el) return;
+      el.textContent = count;
+      if (count > 0) {
+        el.classList.add("count-cell");
+      } else {
+        el.classList.remove("count-cell");
+      }
+    };
+
+    updateCell(this.els.cntE456, counts["東456"]);
+    updateCell(this.els.cntE7, counts["東7"]);
+    updateCell(this.els.cntW12, counts["西12"]);
+    updateCell(this.els.cntS12, counts["南12"]);
+
+    // 保留数のエリア別カウント
+    const holdCounts = { 東456: 0, 東7: 0, 西12: 0, 南12: 0 };
+    dm.holdList.forEach((space) => {
+      const [key] = TspSolver.parseSpace(space);
+      if (holdCounts[key] !== undefined) holdCounts[key]++;
+    });
+
+    updateCell(this.els.cntHoldE456, holdCounts["東456"]);
+    updateCell(this.els.cntHoldE7, holdCounts["東7"]);
+    updateCell(this.els.cntHoldW12, holdCounts["西12"]);
+    updateCell(this.els.cntHoldS12, holdCounts["南12"]);
   }
 
   /**

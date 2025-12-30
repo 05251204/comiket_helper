@@ -230,35 +230,16 @@
 
     <div id="gallery-modal" class="gallery-modal hidden">
       <div class="pdf-modal-header">
-        <div class="gallery-controls-left">
-          <div class="gallery-filter-controls" id="gallery-filter-controls">
-            <span class="filter-label"><i class="fa-solid fa-filter"></i></span>
-            <button class="filter-btn active" data-priority="10">10</button>
-            <button class="filter-btn active" data-priority="9">9</button>
-            <button class="filter-btn active" data-priority="8">8</button>
-            <button class="filter-btn active" data-priority="7">7</button>
-          </div>
-          <button id="btn-gallery-undo" class="gallery-undo-btn" aria-label="Undo">
-            <i class="fa-solid fa-rotate-left"></i>
-          </button>
+        <div class="gallery-sort-controls">
+          <button id="btn-sort-space" class="sort-btn active">スペース順</button>
+          <button id="btn-sort-priority" class="sort-btn">優先度順</button>
         </div>
         <button id="btn-close-gallery" class="btn-close-modal">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
-      <div class="gallery-content-wrapper">
-        <div class="gallery-grid" id="gallery-grid">
-          <!-- JSで生成 -->
-        </div>
-        <div id="gallery-map-container" class="gallery-map-container hidden">
-            <div id="gallery-map-header" class="gallery-map-header">
-              <div class="drag-handle"></div>
-              <span><i class="fa-regular fa-map"></i> エリア地図</span>
-            </div>
-            <div id="gallery-map-scroll" class="gallery-map-scroll">
-              <img id="gallery-map-image" src="" alt="Area Map">
-            </div>
-        </div>
+      <div class="gallery-grid" id="gallery-grid">
+        <!-- JSで生成 -->
       </div>
     </div>
 
