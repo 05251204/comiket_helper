@@ -73,130 +73,148 @@ export class ModalManager {
     }
   }
 
-  /**
-   * ソートモードを変更して再描画
-   */
-  changeSortMode(mode) {
-    if (this.sortMode === mode) return;
-    this.sortMode = mode;
+    /**
+     * ソートモードを変更して再描画
+     */
+    changeSortMode(mode) {
 
-    // UI update
-    if (mode === 'space') {
-      this.els.btnSortSpace.classList.add('active');
-      this.els.btnSortPriority.classList.remove('active');
-    } else {
-      this.els.btnSortSpace.classList.remove('active');
-      this.els.btnSortPriority.classList.add('active');
-    }
-
-    this.renderGallery();
-  }
-
-  /**
-   * ターゲットリストを現在のモードでソート
-   */
-  sortTargets(targets) {
-    const sorted = [...targets];
-    
-    // Helper to get priority value (High > Normal > Low > others)
-    const getPriorityVal = (p) => {
-      const val = (p || "").toLowerCase();
-      if (val === "high") return 3;
-      if (val === "normal") return 2;
-      if (val === "low") return 1;
-      return 0;
-    };
-
-    sorted.sort((a, b) => {
-      if (this.sortMode === 'priority') {
-        const pA = getPriorityVal(a.priority);
-        const pB = getPriorityVal(b.priority);
-        if (pA !== pB) return pB - pA; // Descending
-      }
+          if (this.sortMode === mode) return;
+          this.sortMode = mode;
       
-      // Secondary sort (or primary if mode is 'space'): Space order
-      const [h1, l1, n1] = TspSolver.parseSpace(a.space);
-      const [h2, l2, n2] = TspSolver.parseSpace(b.space);
-
-      if (h1 !== h2) return h1.localeCompare(h2); // Should be same area usually, but just in case
-      if (l1 !== l2) return l1.localeCompare(l2);
-      return n1 - n2;
-    });
-
-    return sorted;
-  }
-
-  /**
-   * PDF(画像)モーダルを表示
-   * @param {string|Object} source - 画像URL または サークルデータオブジェクト
-   */
-  showPdfModal(source) {
-    if (!this.els.pdfModal || !this.els.pdfImage) return;
-
-    let url = "";
-    this.currentCircle = null;
-
-    if (typeof source === "string") {
-      // URL文字列の場合 (地図など)
-      url = source;
-      this.els.btnSetTarget.style.display = "none";
-    } else if (source && typeof source === "object") {
-      // サークルデータの場合
-      url = source.tweet;
-      this.currentCircle = source;
-      this.els.btnSetTarget.style.display = "block";
-    }
-
-    this.els.pdfModal.classList.remove("hidden");
-    this.els.pdfImage.src = url;
-    if (this.els.pdfImage.resetZoom) {
-      this.els.pdfImage.resetZoom();
-    }
-  }
-
-  /**
-   * PDFモーダルを非表示
-   */
-  hidePdfModal() {
-    if (!this.els.pdfModal || !this.els.pdfImage) return;
-    this.els.pdfModal.classList.add("hidden");
-    this.els.pdfImage.src = "";
-    this.currentCircle = null;
-  }
-
-  /**
-   * ギャラリーモーダルを表示
-   * @param {Array} targets - 表示対象のサークルリスト
-   */
-  showGallery(targets) {
-    if (!this.els.galleryModal || !this.els.galleryGrid) return;
+          // UI update
+          if (mode === 'space') {
+            if (this.els.btnSortSpace) this.els.btnSortSpace.classList.add('active');
+            if (this.els.btnSortPriority) this.els.btnSortPriority.classList.remove('active');
+          } else {
+            if (this.els.btnSortSpace) this.els.btnSortSpace.classList.remove('active');
+            if (this.els.btnSortPriority) this.els.btnSortPriority.classList.add('active');
+          }
+      
+          this.renderGallery();
+        }    
+      /**
+       * ターゲットリストを現在のモードでソート
+       */
+      sortTargets(targets) {
+        const sorted = [...targets];
+        
+        // Helper to get priority value
+        const getPriorityVal = (p) => {
+          // 数値の場合（10, 9, 8...）
+          const num = parseFloat(p);
+          if (!isNaN(num)) return num;
     
-    this.currentTargets = targets || [];
-    // Reset sort mode to default or keep previous? Keeping previous is usually better UX.
-    // Ensure UI matches state (e.g. if page reloaded)
-    if (this.sortMode === 'space') {
-       this.els.btnSortSpace.classList.add('active');
-       this.els.btnSortPriority.classList.remove('active');
-    } else {
-       this.els.btnSortSpace.classList.remove('active');
-       this.els.btnSortPriority.classList.add('active');
-    }
-
-    this.renderGallery();
-    this.els.galleryModal.classList.remove("hidden");
-  }
-
-  /**
-   * ギャラリーの中身を描画
-   */
-  renderGallery() {
-    this.els.galleryGrid.innerHTML = "";
-    const targets = this.sortTargets(this.currentTargets);
-
-    if (targets.length === 0) {
-      const msg = document.createElement("div");
-      msg.textContent = "お品書き画像はありません";
-      msg.style.color = "white";
+          // 文字列の場合
+          const val = (p || "").toLowerCase();
+          if (val === "high") return 3;
+          if (val === "normal") return 2;
+          if (val === "low") return 1;
+          return 0;
+        };
+    
+        sorted.sort((a, b) => {
+          if (this.sortMode === 'priority') {
+            const pA = getPriorityVal(a.priority);
+            const pB = getPriorityVal(b.priority);
+            if (pA !== pB) return pB - pA; // Descending
+          }
+          
+          // Secondary sort (or primary if mode is 'space'): Space order
+          const [h1, l1, n1] = TspSolver.parseSpace(a.space);
+          const [h2, l2, n2] = TspSolver.parseSpace(b.space);
+    
+          if (h1 !== h2) return h1.localeCompare(h2); // Should be same area usually, but just in case
+          if (l1 !== l2) return l1.localeCompare(l2);
+          return n1 - n2;
+        });
+    
+        return sorted;
+      }
+    
+      /**
+       * PDF(画像)モーダルを表示
+       * @param {string|Object} source - 画像URL または サークルデータオブジェクト
+       */
+      showPdfModal(source) {
+        if (!this.els.pdfModal || !this.els.pdfImage) return;
+    
+        let url = "";
+        this.currentCircle = null;
+    
+        if (typeof source === "string") {
+          // URL文字列の場合 (地図など)
+          url = source;
+          this.els.btnSetTarget.style.display = "none";
+        } else if (source && typeof source === "object") {
+          // サークルデータの場合
+          url = source.tweet;
+          this.currentCircle = source;
+          this.els.btnSetTarget.style.display = "block";
+        }
+    
+        this.els.pdfModal.classList.remove("hidden");
+        this.els.pdfImage.src = url;
+        if (this.els.pdfImage.resetZoom) {
+          this.els.pdfImage.resetZoom();
+        }
+      }
+    
+      /**
+       * PDFモーダルを非表示
+       */
+      hidePdfModal() {
+        if (!this.els.pdfModal || !this.els.pdfImage) return;
+        this.els.pdfModal.classList.add("hidden");
+        this.els.pdfImage.src = "";
+        this.currentCircle = null;
+      }
+    
+      /**
+       * ギャラリーモーダルを表示
+       * @param {Array} targets - 表示対象のサークルリスト
+       */
+      showGallery(targets) {
+        if (!this.els.galleryModal || !this.els.galleryGrid) return;
+        
+        this.currentTargets = targets || [];
+        // Reset sort mode to default or keep previous? Keeping previous is usually better UX.
+        // Ensure UI matches state (e.g. if page reloaded)
+        if (this.sortMode === 'space') {
+           if (this.els.btnSortSpace) this.els.btnSortSpace.classList.add('active');
+           if (this.els.btnSortPriority) this.els.btnSortPriority.classList.remove('active');
+        } else {
+           if (this.els.btnSortSpace) this.els.btnSortSpace.classList.remove('active');
+           if (this.els.btnSortPriority) this.els.btnSortPriority.classList.add('active');
+        }
+    
+        this.renderGallery();
+        this.els.galleryModal.classList.remove("hidden");
+      }
+    
+      /**
+       * ギャラリーの中身を描画
+       */
+      renderGallery() {
+        this.els.galleryGrid.innerHTML = "";
+        
+        // フィルタリング適用
+        const filteredTargets = this.currentTargets.filter(c => {
+          // フィルタが空（全部オフ）なら何も表示しない？あるいは全部表示？
+          // 一般的には全部オフ＝フィルタリングなし＝全部表示、または全部オフ＝何もなし
+          // ここではHTMLの初期状態が全部activeなので、「activeなものだけ表示」とする
+          if (this.activePriorities.length === 0) return false;
+    
+          // priorityが数値か文字列か不明なので文字列化して比較
+          // データがない場合は空文字
+          const p = String(c.priority || "");
+          return this.activePriorities.includes(p);
+        });
+    
+        const targets = this.sortTargets(filteredTargets);
+    
+        if (targets.length === 0) {
+          const msg = document.createElement("div");
+          msg.textContent = "お品書き画像はありません";      msg.style.color = "white";
       msg.style.padding = "1rem";
       msg.style.gridColumn = "1 / -1";
       this.els.galleryGrid.appendChild(msg);

@@ -819,6 +819,20 @@ input[type="text"] {
   font-size: 0.6rem;
 }
 
+.gallery-twitter-link {
+  color: #1d9bf0;
+  font-size: 1.1rem;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s;
+}
+
+.gallery-twitter-link:active {
+  transform: scale(1.2);
+}
+
 .gallery-btn-buy {
   background: var(--success);
   color: white;

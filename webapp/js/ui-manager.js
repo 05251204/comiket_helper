@@ -496,7 +496,16 @@ export class UIManager {
    * ターゲットリストを現在のモードでソート
    */
   sortTargets(targets) {
-    const sorted = [...targets];
+    // 1. Filter
+    const filtered = targets.filter(c => {
+      // 優先度を数値化
+      const pVal = Number(c.priority);
+      const priority = isNaN(pVal) ? 0 : pVal;
+      // 選択された優先度に含まれるかチェック
+      return this.activePriorities.includes(priority);
+    });
+
+    const sorted = [...filtered];
     
     // Helper to get priority value (Integers, larger is higher)
     const getPriorityVal = (p) => {
@@ -647,6 +656,17 @@ export class UIManager {
         const prioritySpan = !isNaN(priorityVal) && priorityVal > 0 ? `<span class="gallery-priority"><i class="fa-solid fa-star"></i>${priorityVal}</span>` : "";
         name.innerHTML = `${c.space}${prioritySpan}`; 
         info.appendChild(name);
+
+        // Twitterリンク
+        if (c.account) {
+            const twLink = document.createElement("a");
+            twLink.href = c.account;
+            twLink.target = "_blank";
+            twLink.className = "gallery-twitter-link";
+            twLink.innerHTML = '<i class="fa-brands fa-twitter"></i>';
+            twLink.onclick = (e) => e.stopPropagation(); // モーダル表示を防ぐ
+            info.appendChild(twLink);
+        }
 
         // 購入ボタン
         const buyBtn = document.createElement("button");

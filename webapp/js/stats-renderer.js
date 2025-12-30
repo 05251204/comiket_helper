@@ -15,7 +15,6 @@ export class StatsRenderer {
    * 初期化（DOM要素取得とイベント設定）
    */
   init() {
-    console.log("StatsRenderer init called");
     this.els = {
       cntE456: document.getElementById("count-e456"),
       cntE7: document.getElementById("count-e7"),
@@ -27,7 +26,6 @@ export class StatsRenderer {
       cntHoldW12: document.getElementById("count-hold-w12"),
       cntHoldS12: document.getElementById("count-hold-s12"),
     };
-    console.log("StatsRenderer elements:", this.els);
     
     this.initEvents();
   }
@@ -46,16 +44,11 @@ export class StatsRenderer {
 
     Object.entries(areaMap).forEach(([key, areaName]) => {
       if (this.els[key]) {
-        console.log(`Adding listener to ${key}`);
         this.els[key].addEventListener("click", () => {
-          console.log(`Clicked ${key}, classes: ${this.els[key].className}`);
           if (this.els[key].classList.contains("count-cell")) {
-            console.log("Opening gallery for", areaName);
             this.uiManager.showGallery(areaName, false);
           }
         });
-      } else {
-        console.warn(`Element ${key} not found`);
       }
     });
 
@@ -69,17 +62,12 @@ export class StatsRenderer {
 
     Object.entries(holdAreaMap).forEach(([key, areaName]) => {
       if (this.els[key]) {
-        console.log(`Adding listener to ${key}`);
         this.els[key].addEventListener("click", (e) => {
           e.stopPropagation();
-          console.log(`Clicked ${key} (hold), classes: ${this.els[key].className}`);
           if (this.els[key].classList.contains("count-cell")) {
-            console.log("Opening hold gallery for", areaName);
             this.uiManager.showGallery(areaName, true);
           }
         });
-      } else {
-        console.warn(`Element ${key} not found`);
       }
     });
   }
