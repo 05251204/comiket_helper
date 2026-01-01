@@ -13,11 +13,19 @@ def read_root():
     return {"status": "ok", "message": "Twitter Scraper with auth.json"}
 
 
-@app.get("/api/images")
-async def get_images(url: str):
-    if not url:
-        raise HTTPException(status_code=400, detail="URL required")
+import base64
+import os
+import re
+import sys
+import asyncio
 
+from fastapi import FastAPI, HTTPException
+from playwright.async_api import async_playwright
+
+app = FastAPI()
+
+
+async def scrape_twitter(url: str, scroll_count: int = 5):
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=True,
@@ -53,8 +61,46 @@ async def get_images(url: str):
             except:
                 print("Element wait timeout (Might be OK if content loaded)")
 
-            await page.mouse.wheel(0, 1000)
-            await page.wait_for_timeout(2000)
+            tweets_data = []
+            seen_tweet_sigs = set()
+
+            for i in range(scroll_count):
+                print(f"Scrolling {i+1}/{scroll_count}...")
+                
+                # --- ツイート抽出処理 (スクロールごとに実行) ---
+                articles = await page.locator('article[data-testid="tweet"]').all()
+                for article in articles:
+                    try:
+                        # User Name
+                        user_name_locator = article.locator('[data-testid="User-Name"]')
+                        user_info = await user_name_locator.inner_text() if await user_name_locator.count() > 0 else "(No User)"
+                        
+                        # Text
+                        text_locator = article.locator('[data-testid="tweetText"]')
+                        text = await text_locator.inner_text() if await text_locator.count() > 0 else "(No Text)"
+                        
+                        # Timestamp
+                        time_locator = article.locator('time')
+                        timestamp = await time_locator.get_attribute("datetime") if await time_locator.count() > 0 else "(No Time)"
+
+                        # 重複チェック用の署名を作成
+                        sig = f"{user_info}_{timestamp}_{text}"
+                        
+                        if sig not in seen_tweet_sigs:
+                            seen_tweet_sigs.add(sig)
+                            tweets_data.append({
+                                "user_info": user_info.replace("\n", " "),
+                                "text": text,
+                                "timestamp": timestamp
+                            })
+                    except Exception as e:
+                        # 要素が取得中に消えることもあるので無視して次へ
+                        continue
+
+                await page.mouse.wheel(0, 2000)
+                await page.wait_for_timeout(2000)
+
+            print(f"Total unique tweets collected: {len(tweets_data)}")
 
             # --- ここで状況証拠を保存 ---
             page_title = await page.title()
@@ -63,32 +109,63 @@ async def get_images(url: str):
             screenshot_bytes = await page.screenshot(full_page=False)
             screenshot_b64 = base64.b64encode(screenshot_bytes).decode("utf-8")
 
-            content = await page.content()
-            pattern = (
-                r"https?:(\\?\/){2}pbs\.twimg\.com\\?\/media\\?\/[a-zA-Z0-9?=&_\-%]+"
-            )
-            raw_matches = [m.group(0) for m in re.finditer(pattern, content)]
-            clean_links = list(
-                set([link.replace("\\", "").split("&")[0] for link in raw_matches])
-            )
-
             return {
                 "success": True,
-                "count": len(clean_links),
-                "title": page_title,  # 今のページタイトル
-                "images": clean_links,
-                "debug_screenshot": screenshot_b64,  # ★ここ画像データ
+                "title": page_title,
+                "debug_screenshot": screenshot_b64,
+                "tweets": tweets_data
             }
 
         except Exception as e:
             print(f"Error: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+            raise e
         finally:
             await browser.close()
 
 
-if __name__ == "__main__":
-    import uvicorn
+@app.get("/")
+def read_root():
+    return {"status": "ok", "message": "Twitter Scraper with auth.json"}
 
-    port = int(os.getenv("PORT", 8080))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+
+@app.get("/api/images")
+async def get_images(url: str, scroll_count: int = 5):
+    if not url:
+        raise HTTPException(status_code=400, detail="URL required")
+    
+    try:
+        return await scrape_twitter(url, scroll_count)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        url = sys.argv[1]
+        print(f"Running in CLI mode for URL: {url}")
+        try:
+            result = asyncio.run(scrape_twitter(url))
+            print(f"Success! Title: {result['title']}")
+            
+            # CLI実行時はBase64画像を保存してみる（デバッグ用）
+            with open("debug_screenshot.png", "wb") as f:
+                f.write(base64.b64decode(result['debug_screenshot']))
+            print("Screenshot saved to debug_screenshot.png")
+
+            # ツイートを保存
+            if "tweets" in result:
+                with open("tweets.txt", "w", encoding="utf-8") as f:
+                    for tweet in result["tweets"]:
+                        f.write(f"User: {tweet['user_info']}\n")
+                        f.write(f"Time: {tweet['timestamp']}\n")
+                        f.write(f"Text: {tweet['text']}\n")
+                        f.write("-" * 20 + "\n")
+                print(f"Saved {len(result['tweets'])} tweets to tweets.txt")
+
+        except Exception as e:
+            print(f"Failed: {e}")
+    else:
+        import uvicorn
+
+        port = int(os.getenv("PORT", 8080))
+        uvicorn.run(app, host="0.0.0.0", port=port)
