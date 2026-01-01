@@ -26,12 +26,14 @@ export class MapRenderer {
   init() {
     this.renderMapLinks();
     
-    // 地図画像のズーム機能はModalManagerで一括管理するか、
-    // あるいはここで個別に設定するか。
-    // 現状の設計ではModalManagerが担当しているため、ここでは初期化しない、
-    // もしくはUIManagerからModalManagerを通じて設定されることを想定する。
-    // しかし、MapRendererが地図のDOMを持っているので、ここで設定する方が自然かもしれない。
-    // 今回は既存のロジックに従い、UIManager(またはApp)がModalManagerを使って設定すると仮定する。
+    // メイン画面の地図画像にズーム機能を適用
+    // ModalManagerのsetupZoomメソッドを借用する
+    if (this.uiManager && this.uiManager.modalManager && this.els.mapImageScrollContainer && this.els.mapImage) {
+        this.uiManager.modalManager.setupZoom(
+            this.els.mapImageScrollContainer, 
+            this.els.mapImage
+        );
+    }
   }
 
   /**
