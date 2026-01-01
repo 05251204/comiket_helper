@@ -176,32 +176,8 @@
       <!-- ステータス -->
       <div class="card compact-card">
         <div class="stats-container">
-          <table class="stats-table">
-            <thead>
-              <tr>
-                <th></th>
-                <th>東4-6</th>
-                <th>東7</th>
-                <th>西</th>
-                <th>南</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="status-label">残り</td>
-                <td id="count-e456">0</td>
-                <td id="count-e7">0</td>
-                <td id="count-w12">0</td>
-                <td id="count-s12">0</td>
-              </tr>
-              <tr id="btn-hold-list" class="hold-row">
-                <td class="status-label warning">保留</td>
-                <td id="count-hold-e456">0</td>
-                <td id="count-hold-e7">0</td>
-                <td id="count-hold-w12">0</td>
-                <td id="count-hold-s12">0</td>
-              </tr>
-            </tbody>
+          <table class="stats-table" id="stats-table">
+            <!-- JSで動的に生成 -->
           </table>
         </div>
         <button

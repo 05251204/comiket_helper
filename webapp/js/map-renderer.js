@@ -7,7 +7,7 @@ import { TspSolver } from "./tsp-solver.js";
  */
 export class MapRenderer {
   constructor(uiManager) {
-    this.uiManager = uiManager; // 将来的な連携用
+    this.uiManager = uiManager;
     this.els = {
       mapContainer: document.getElementById("target-map-container"),
       mapImageScrollContainer: document.getElementById("map-image-container"),
@@ -27,7 +27,6 @@ export class MapRenderer {
     this.renderMapLinks();
     
     // メイン画面の地図画像にズーム機能を適用
-    // ModalManagerのsetupZoomメソッドを借用する
     if (this.uiManager && this.uiManager.modalManager && this.els.mapImageScrollContainer && this.els.mapImage) {
         this.uiManager.modalManager.setupZoom(
             this.els.mapImageScrollContainer, 
@@ -40,22 +39,17 @@ export class MapRenderer {
    * 地図リンクボタンの生成
    */
   renderMapLinks() {
-    if (!this.els.mapLinksContainer || !Config.MAP_LINKS) return;
+    if (!this.els.mapLinksContainer || !Config.AREAS) return;
 
     this.els.mapLinksContainer.innerHTML = "";
-    Object.entries(Config.MAP_LINKS).forEach(([name, url]) => {
+    Config.AREAS.forEach((area) => {
       const button = document.createElement("button");
       button.className = "map-link-btn";
-      button.innerHTML = `<i class="fa-regular fa-map"></i> ${name}`;
+      button.innerHTML = `<i class="fa-regular fa-map"></i> ${area.name}`;
       
-      // ModalManagerのメソッドを呼び出す必要がある。
-      // MapRendererはModalManagerを知らないので、カスタムイベントを発火するか、
-      // コールバックを受け取る設計にするのが良いが、
-      // 簡易的に window.uiManager (global) を経由するか、
-      // コンストラクタで渡された uiManager を使う。
       button.onclick = () => {
         if (this.uiManager && this.uiManager.modalManager) {
-            this.uiManager.modalManager.showPdfModal(url);
+            this.uiManager.modalManager.showPdfModal(area.mapFile);
         }
       };
       
@@ -69,8 +63,11 @@ export class MapRenderer {
    */
   updateMap(space) {
     const [hallGroup] = TspSolver.parseSpace(space);
-    if (hallGroup && Config.MAP_LINKS[hallGroup]) {
-      const url = Config.MAP_LINKS[hallGroup];
+    // hallGroup(area.name) からエリア定義を検索
+    const area = Config.AREAS.find(a => a.name === hallGroup);
+
+    if (area && area.mapFile) {
+      const url = area.mapFile;
       
       // コンテナを表示
       const isHidden = this.els.mapContainer.classList.contains("hidden");
@@ -78,12 +75,12 @@ export class MapRenderer {
         this.els.mapContainer.classList.remove("hidden");
       }
 
-      this.els.mapAreaName.textContent = hallGroup;
+      this.els.mapAreaName.textContent = area.name;
       
       // 同じURLならリロードしない
       if (this.els.mapImage.getAttribute("src") !== url) {
          this.els.mapImage.src = url;
-         // 画像が変更されたらズームリセットなどをここで行うのが理想
+         // 画像が変更されたらズームリセット
          if (this.els.mapImage.resetZoom) {
              this.els.mapImage.resetZoom();
          }

@@ -79,14 +79,16 @@ export class UIManager {
     // 統計情報の初期化
     this.statsRenderer.init();
 
-    // セレクトボックス初期化 (EWSN)
+    // セレクトボックス初期化 (EWSN) - Config.AREASを使用
     this.els.locEwsn.innerHTML = "";
-    Object.keys(Config.LABEL_OPTIONS).forEach((key) => {
-      const opt = document.createElement("option");
-      opt.value = key;
-      opt.textContent = key;
-      this.els.locEwsn.appendChild(opt);
-    });
+    if (Config.AREAS) {
+      Config.AREAS.forEach((area) => {
+        const opt = document.createElement("option");
+        opt.value = area.name; // area.idではなくnameを使う（既存ロジック互換のため）
+        opt.textContent = area.name;
+        this.els.locEwsn.appendChild(opt);
+      });
+    }
 
     // セレクトボックス初期化 (Number)
     this.els.locNumber.innerHTML = "";
@@ -254,7 +256,17 @@ export class UIManager {
   updateLabelOptions(updateCustom = false) {
     const selected = this.els.locEwsn.value;
     this.els.locLabel.innerHTML = "";
-    (Config.LABEL_OPTIONS[selected] || []).forEach((val) => {
+    
+    // Config.AREASから該当エリアを検索
+    let labels = [];
+    if (Config.AREAS) {
+      const area = Config.AREAS.find(a => a.name === selected);
+      if (area) {
+        labels = area.labels;
+      }
+    }
+
+    labels.forEach((val) => {
       const opt = document.createElement("option");
       opt.value = val;
       opt.textContent = val;

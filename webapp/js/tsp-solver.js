@@ -16,20 +16,25 @@ export class TspSolver {
 
   /**
    * スペース文字列を解析
-   * @returns {[string, string, number]} [ホール群, 識別子, 番号]
+   * @returns {[string, string, number]} [ホール群名(name), 識別子, 番号]
    */
   static parseSpace(space) {
     if (!space) return ["", "", 0];
-    const ewsnChar = space[0];
+    const prefixChar = space[0];
     const labelChar = space[1];
     const numberPart = this.toHalfWidth(space.substring(2));
 
     let hallGroup = "";
-    // Configの定義を使ってホール判定
-    for (const [key, chars] of Object.entries(Config.LABEL_OPTIONS)) {
-      if (key.startsWith(ewsnChar) && chars.includes(labelChar)) {
-        hallGroup = key;
-        break;
+    
+    // Config.AREAS を使用して動的に判定
+    if (Config.AREAS) {
+      for (const area of Config.AREAS) {
+        // prefixが一致するか (定義がない場合は無視あるいは全許可だが、基本は定義推奨)
+        const prefixMatch = area.prefixes ? area.prefixes.includes(prefixChar) : true;
+        if (prefixMatch && area.labels.includes(labelChar)) {
+          hallGroup = area.name; // 既存ロジックとの互換性のため name を返す
+          break;
+        }
       }
     }
 

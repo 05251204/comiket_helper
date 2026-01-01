@@ -90,16 +90,11 @@ class App {
 
     document.getElementById("btn-reset-all").onclick = () => this.handleReset();
     
-    // 保留行のクリックイベント（ラベル部分のみでリセット発火）
-    const holdRow = document.getElementById("btn-hold-list");
-    if (holdRow) {
-      holdRow.addEventListener("click", (e) => {
-        // クリックされた要素が最初のセル（ラベル）の場合のみリセット処理を実行
-        const firstCell = holdRow.querySelector("td");
-        if (e.target === firstCell || firstCell.contains(e.target)) {
-          this.handleResetHold();
-        }
-      });
+    // 保留リストリセットのコールバック設定 (StatsRenderer経由)
+    if (this.ui.statsRenderer) {
+        this.ui.statsRenderer.setOnHoldListReset(() => {
+            this.handleResetHold();
+        });
     }
 
     // オンライン復帰時の同期
@@ -253,7 +248,7 @@ class App {
 }
 
 // アプリ起動
-const app = new App();
 document.addEventListener("DOMContentLoaded", () => {
+  const app = new App();
   app.init();
 });

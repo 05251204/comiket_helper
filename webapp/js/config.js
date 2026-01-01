@@ -1,19 +1,43 @@
 /**
  * アプリケーション全体の定数設定
  */
-export const Config = {
-  // 東西南北ごとの識別子リスト
-  LABEL_OPTIONS: {
-    東456:
-      "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨ".split(
-        ""
-      ),
-    東7: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
-    西12: "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめ".split(
-      ""
-    ),
-    南12: "abcdefghijklmnopqrstuvwxyz".split(""),
+
+// エリア定義（ここを変更することでC108以降や他イベントに対応可能）
+const AREA_DEFINITIONS = [
+  {
+    id: "e456",
+    name: "東456", // UI表示用
+    prefixes: ["東"], // スペースの先頭文字
+    labels: "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨ".split(""),
+    mapFile: "./maps/C107Map_e456.jpg",
   },
+  {
+    id: "e7",
+    name: "東7",
+    prefixes: ["東"],
+    labels: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
+    mapFile: "./maps/C107Map_e7.jpg",
+  },
+  {
+    id: "w12",
+    name: "西12",
+    prefixes: ["西"],
+    labels: "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめ".split(""),
+    mapFile: "./maps/C107Map_w12.jpg",
+  },
+  {
+    id: "s12",
+    name: "南12",
+    prefixes: ["南"],
+    labels: "abcdefghijklmnopqrstuvwxyz".split(""),
+    mapFile: "./maps/C107Map_s12.jpg",
+  },
+];
+
+export const Config = {
+  // 新しいエリア定義
+  AREAS: AREA_DEFINITIONS,
+
   // LocalStorageのキー
   STORAGE_KEYS: {
     PURCHASED: "purchasedList",
@@ -23,11 +47,5 @@ export const Config = {
     URL: "webAppURL",
     SYNC_QUEUE: "syncQueue",
     SELECTED_SHEETS: "selectedSheets",
-  },
-  MAP_LINKS: {
-    東456: "./maps/C107Map_e456.jpg",
-    東7: "./maps/C107Map_e7.jpg",
-    西12: "./maps/C107Map_w12.jpg",
-    南12: "./maps/C107Map_s12.jpg",
   },
 };

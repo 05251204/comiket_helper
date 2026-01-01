@@ -8,68 +8,96 @@ import { TspSolver } from "./tsp-solver.js";
 export class StatsRenderer {
   constructor(uiManager) {
     this.uiManager = uiManager; // クリックイベント連携用
-    this.els = {};
+    this.tableEl = document.getElementById("stats-table");
+    this.areaCells = {}; // { "areaName_type": element }
+    this.onHoldListReset = null; // コールバック
   }
 
   /**
-   * 初期化（DOM要素取得とイベント設定）
+   * 初期化（DOM要素生成とイベント設定）
    */
   init() {
-    this.els = {
-      cntE456: document.getElementById("count-e456"),
-      cntE7: document.getElementById("count-e7"),
-      cntW12: document.getElementById("count-w12"),
-      cntS12: document.getElementById("count-s12"),
-      
-      cntHoldE456: document.getElementById("count-hold-e456"),
-      cntHoldE7: document.getElementById("count-hold-e7"),
-      cntHoldW12: document.getElementById("count-hold-w12"),
-      cntHoldS12: document.getElementById("count-hold-s12"),
-    };
-    
-    this.initEvents();
+    if (!this.tableEl) return;
+    this.renderTable();
   }
 
   /**
-   * イベントリスナーの設定
+   * テーブルの動的生成
    */
-  initEvents() {
-    // 残り件数セル
-    const areaMap = {
-      cntE456: "東456",
-      cntE7: "東7",
-      cntW12: "西12",
-      cntS12: "南12",
-    };
+  renderTable() {
+    this.tableEl.innerHTML = "";
+    this.areaCells = {};
 
-    Object.entries(areaMap).forEach(([key, areaName]) => {
-      if (this.els[key]) {
-        this.els[key].addEventListener("click", () => {
-          if (this.els[key].classList.contains("count-cell")) {
-            this.uiManager.showGallery(areaName, false);
-          }
-        });
-      }
+    const areas = Config.AREAS || []; // フォールバック対応は省略（Config修正済み前提）
+
+    // THEAD
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    
+    // 左上の空セル
+    const thEmpty = document.createElement("th");
+    headerRow.appendChild(thEmpty);
+
+    areas.forEach(area => {
+      const th = document.createElement("th");
+      th.textContent = area.name;
+      headerRow.appendChild(th);
     });
+    thead.appendChild(headerRow);
+    this.tableEl.appendChild(thead);
 
-    // 保留件数セル
-    const holdAreaMap = {
-      cntHoldE456: "東456",
-      cntHoldE7: "東7",
-      cntHoldW12: "西12",
-      cntHoldS12: "南12",
-    };
+    // TBODY
+    const tbody = document.createElement("tbody");
 
-    Object.entries(holdAreaMap).forEach(([key, areaName]) => {
-      if (this.els[key]) {
-        this.els[key].addEventListener("click", (e) => {
-          e.stopPropagation();
-          if (this.els[key].classList.contains("count-cell")) {
-            this.uiManager.showGallery(areaName, true);
+    // 残り件数行
+    const remainingRow = document.createElement("tr");
+    const tdRemLabel = document.createElement("td");
+    tdRemLabel.className = "status-label";
+    tdRemLabel.textContent = "残り";
+    remainingRow.appendChild(tdRemLabel);
+
+    areas.forEach(area => {
+      const td = document.createElement("td");
+      td.textContent = "0";
+      td.onclick = () => {
+          if (td.classList.contains("count-cell")) {
+              this.uiManager.showGallery(area.name, false);
           }
-        });
-      }
+      };
+      remainingRow.appendChild(td);
+      this.areaCells[`${area.name}_remaining`] = td;
     });
+    tbody.appendChild(remainingRow);
+
+    // 保留件数行
+    const holdRow = document.createElement("tr");
+    holdRow.className = "hold-row"; // スタイリング用
+    
+    const tdHoldLabel = document.createElement("td");
+    tdHoldLabel.className = "status-label warning";
+    tdHoldLabel.textContent = "保留";
+    // ラベルクリックでリセット
+    tdHoldLabel.onclick = (e) => {
+        e.stopPropagation();
+        if (this.onHoldListReset) this.onHoldListReset();
+    };
+    holdRow.appendChild(tdHoldLabel);
+
+    areas.forEach(area => {
+        const td = document.createElement("td");
+        td.textContent = "0";
+        td.onclick = (e) => {
+            e.stopPropagation();
+            if (td.classList.contains("count-cell")) {
+                this.uiManager.showGallery(area.name, true);
+            }
+        };
+        holdRow.appendChild(td);
+        this.areaCells[`${area.name}_hold`] = td;
+    });
+    tbody.appendChild(holdRow);
+
+    this.tableEl.appendChild(tbody);
   }
 
   /**
@@ -78,40 +106,53 @@ export class StatsRenderer {
    */
   updateCounts(dm) {
     const unvisited = dm.getUnvisited();
-    const counts = { 東456: 0, 東7: 0, 西12: 0, 南12: 0 };
+    const counts = {}; // { "areaName": count }
+    const holdCounts = {}; // { "areaName": count }
 
+    // 初期化
+    if (Config.AREAS) {
+        Config.AREAS.forEach(area => {
+            counts[area.name] = 0;
+            holdCounts[area.name] = 0;
+        });
+    }
+
+    // 未訪問カウント
     unvisited.forEach((c) => {
       const [key] = TspSolver.parseSpace(c.space);
-      // Config.AREA_DEFINITIONSが導入されたらそちらを参照するように変更予定
-      // 現状はTspSolver.parseSpaceがキーを返すと仮定
       if (counts[key] !== undefined) counts[key]++;
     });
 
-    const updateCell = (el, count) => {
-      if (!el) return;
-      el.textContent = count;
-      if (count > 0) {
-        el.classList.add("count-cell");
-      } else {
-        el.classList.remove("count-cell");
-      }
-    };
-
-    updateCell(this.els.cntE456, counts["東456"]);
-    updateCell(this.els.cntE7, counts["東7"]);
-    updateCell(this.els.cntW12, counts["西12"]);
-    updateCell(this.els.cntS12, counts["南12"]);
-
-    // 保留数のエリア別カウント
-    const holdCounts = { 東456: 0, 東7: 0, 西12: 0, 南12: 0 };
+    // 保留カウント
     dm.holdList.forEach((space) => {
       const [key] = TspSolver.parseSpace(space);
       if (holdCounts[key] !== undefined) holdCounts[key]++;
     });
 
-    updateCell(this.els.cntHoldE456, holdCounts["東456"]);
-    updateCell(this.els.cntHoldE7, holdCounts["東7"]);
-    updateCell(this.els.cntHoldW12, holdCounts["西12"]);
-    updateCell(this.els.cntHoldS12, holdCounts["南12"]);
+    const updateCell = (type, areaName, count) => {
+      const cell = this.areaCells[`${areaName}_${type}`];
+      if (!cell) return;
+      
+      cell.textContent = count;
+      if (count > 0) {
+        cell.classList.add("count-cell");
+      } else {
+        cell.classList.remove("count-cell");
+      }
+    };
+
+    if (Config.AREAS) {
+        Config.AREAS.forEach(area => {
+            updateCell("remaining", area.name, counts[area.name]);
+            updateCell("hold", area.name, holdCounts[area.name]);
+        });
+    }
+  }
+
+  /**
+   * 保留リストリセット時のコールバック設定
+   */
+  setOnHoldListReset(callback) {
+      this.onHoldListReset = callback;
   }
 }
