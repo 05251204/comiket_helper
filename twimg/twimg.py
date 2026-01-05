@@ -18,6 +18,7 @@ import os
 import re
 import sys
 import asyncio
+import json
 
 from fastapi import FastAPI, HTTPException
 from playwright.async_api import async_playwright
@@ -35,10 +36,29 @@ async def scrape_twitter(url: str, scroll_count: int = 5):
                 "--disable-dev-shm-usage",
             ],
         )
+        
+        # 認証情報の読み込みロジック
+        storage_state = None
         if os.path.exists("auth.json"):
             print("Found auth.json, loading...")
+            storage_state = "auth.json"
+        elif os.environ.get("TWITTER_AUTH_JSON"):
+            print("Found TWITTER_AUTH_JSON env var, loading...")
+            try:
+                # 環境変数が生JSONかBase64か判別してロード
+                env_val = os.environ["TWITTER_AUTH_JSON"]
+                try:
+                    storage_state = json.loads(env_val)
+                except json.JSONDecodeError:
+                    # JSONでなければBase64とみなしてデコード
+                    decoded = base64.b64decode(env_val).decode("utf-8")
+                    storage_state = json.loads(decoded)
+            except Exception as e:
+                print(f"Failed to load auth from env: {e}")
+
+        if storage_state:
             context = await browser.new_context(
-                storage_state="auth.json",
+                storage_state=storage_state,
                 viewport={"width": 1280, "height": 800},
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 locale="ja-JP",
@@ -46,6 +66,7 @@ async def scrape_twitter(url: str, scroll_count: int = 5):
         else:
             print("Warning: auth.json not found!")
             context = await browser.new_context(locale="ja-JP")
+        
         page = await context.new_page()
         await page.add_init_script("""
             Object.defineProperty(navigator, 'webdriver', {
