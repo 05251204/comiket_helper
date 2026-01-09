@@ -1,30 +1,10 @@
 import base64
 import os
-import re
-
-from fastapi import FastAPI, HTTPException
-from playwright.async_api import async_playwright
-
-app = FastAPI()
-
-
-@app.get("/")
-def read_root():
-    return {"status": "ok", "message": "Twitter Scraper with auth.json"}
-
-
-import base64
-import os
-import re
 import sys
 import asyncio
 import json
 
-from fastapi import FastAPI, HTTPException
 from playwright.async_api import async_playwright
-
-app = FastAPI()
-
 
 async def scrape_twitter(url: str, scroll_count: int = 5):
     async with async_playwright() as p:
@@ -122,20 +102,7 @@ async def scrape_twitter(url: str, scroll_count: int = 5):
                 await page.wait_for_timeout(2000)
 
             print(f"Total unique tweets collected: {len(tweets_data)}")
-
-            # --- ここで状況証拠を保存 ---
-            page_title = await page.title()
-
-            # スクリーンショットをメモリ上に撮ってBase64にする
-            screenshot_bytes = await page.screenshot(full_page=False)
-            screenshot_b64 = base64.b64encode(screenshot_bytes).decode("utf-8")
-
-            return {
-                "success": True,
-                "title": page_title,
-                "debug_screenshot": screenshot_b64,
-                "tweets": tweets_data
-            }
+            return tweets_data
 
         except Exception as e:
             print(f"Error: {e}")
@@ -144,49 +111,28 @@ async def scrape_twitter(url: str, scroll_count: int = 5):
             await browser.close()
 
 
-@app.get("/")
-def read_root():
-    return {"status": "ok", "message": "Twitter Scraper with auth.json"}
-
-
-@app.get("/api/images")
-async def get_images(url: str, scroll_count: int = 5):
-    if not url:
-        raise HTTPException(status_code=400, detail="URL required")
-    
-    try:
-        return await scrape_twitter(url, scroll_count)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         url = sys.argv[1]
-        print(f"Running in CLI mode for URL: {url}")
+        print(f"Running for URL: {url}")
         try:
-            result = asyncio.run(scrape_twitter(url))
-            print(f"Success! Title: {result['title']}")
+            tweets = asyncio.run(scrape_twitter(url))
             
-            # CLI実行時はBase64画像を保存してみる（デバッグ用）
-            with open("debug_screenshot.png", "wb") as f:
-                f.write(base64.b64decode(result['debug_screenshot']))
-            print("Screenshot saved to debug_screenshot.png")
-
             # ツイートを保存
-            if "tweets" in result:
+            if tweets:
                 with open("tweets.txt", "w", encoding="utf-8") as f:
-                    for tweet in result["tweets"]:
+                    for tweet in tweets:
                         f.write(f"User: {tweet['user_info']}\n")
                         f.write(f"Time: {tweet['timestamp']}\n")
                         f.write(f"Text: {tweet['text']}\n")
                         f.write("-" * 20 + "\n")
-                print(f"Saved {len(result['tweets'])} tweets to tweets.txt")
+                print(f"Saved {len(tweets)} tweets to tweets.txt")
+            else:
+                print("No tweets found.")
 
         except Exception as e:
             print(f"Failed: {e}")
+            sys.exit(1)
     else:
-        import uvicorn
-
-        port = int(os.getenv("PORT", 8080))
-        uvicorn.run(app, host="0.0.0.0", port=port)
+        print("Usage: python twimg.py <URL>")
+        sys.exit(1)

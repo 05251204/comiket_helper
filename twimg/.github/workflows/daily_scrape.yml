@@ -44,4 +44,3 @@ jobs:
           keep_files: true # 過去のデータを残しつつ新しいファイルを追加
           include_files: |
              tweets.txt
-             debug_screenshot.png
