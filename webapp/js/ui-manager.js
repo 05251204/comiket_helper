@@ -3,6 +3,8 @@ import { TspSolver } from "./tsp-solver.js";
 import { StatsRenderer } from "./stats-renderer.js";
 import { ModalManager } from "./modal-manager.js";
 import { MapRenderer } from "./map-renderer.js";
+import { CustomSelect } from "./components/custom-select.js";
+import { SheetListRenderer } from "./components/sheet-list-renderer.js";
 
 /**
  * UI管理クラス
@@ -14,8 +16,6 @@ export class UIManager {
     this.onSetNextTarget = null; // コールバック
     this.statsRenderer = new StatsRenderer(this);
     this.modalManager = new ModalManager();
-    // MapRenderer は初期化時に作成（UIManagerの参照が必要なため、ここでは渡せるがinitで渡すほうが安全）
-    // あるいは this を渡す。
     this.mapRenderer = new MapRenderer(this);
 
     this.els = {
@@ -53,6 +53,7 @@ export class UIManager {
 
     this.toastTimer = null;
     this.customSelects = {}; 
+    this.sheetListRenderer = new SheetListRenderer(this.els.sheetListContainer);
   }
 
   /**
@@ -66,9 +67,7 @@ export class UIManager {
     this.modalManager.setOnSetNextTargetCallback(onSetNextTarget);
     this.modalManager.init(this, dataManager);
     
-    // MapRenderer はコンストラクタで生成済みだが、initが必要なら呼ぶ
-    // 現状の MapRenderer.js は init() を持っているが、単純に renderMapLinks を呼ぶだけ。
-    // UIManager側で呼ぶ必要はないかもしれないが、明確にするため呼んでおく
+    // MapRenderer logic
     if (this.mapRenderer.init) {
         this.mapRenderer.init();
     }
@@ -84,7 +83,7 @@ export class UIManager {
     if (Config.AREAS) {
       Config.AREAS.forEach((area) => {
         const opt = document.createElement("option");
-        opt.value = area.name; // area.idではなくnameを使う（既存ロジック互換のため）
+        opt.value = area.name; 
         opt.textContent = area.name;
         this.els.locEwsn.appendChild(opt);
       });
@@ -101,11 +100,11 @@ export class UIManager {
     });
 
     // カスタムセレクトの適用
-    this.customSelects.ewsn = this.setupCustomSelect(this.els.locEwsn, () => {
+    this.customSelects.ewsn = new CustomSelect(this.els.locEwsn, () => {
       this.updateLabelOptions(true); 
     });
-    this.customSelects.label = this.setupCustomSelect(this.els.locLabel);
-    this.customSelects.number = this.setupCustomSelect(this.els.locNumber);
+    this.customSelects.label = new CustomSelect(this.els.locLabel);
+    this.customSelects.number = new CustomSelect(this.els.locNumber);
 
     // ラベル初期化
     this.updateLabelOptions(true);
@@ -123,131 +122,14 @@ export class UIManager {
       this.modalManager.showGallery(areaKey, isHold);
   }
 
-  // --- Map Delegate Methods ---
-  
-  // 地図リンク生成はMapRendererが担当 (DOM要素を持っているので自動で行われるはずだが、
-  // MapRendererのinitでrenderMapLinksが呼ばれる)
+  // --- Sheet List Delegate Methods ---
 
-  /**
-   * シート一覧チェックボックスリストの描画
-   */
   renderSheetList(sheets, selectedSheets, onChangeCallback) {
-    const container = this.els.sheetListContainer;
-    container.innerHTML = "";
-
-    if (!sheets || sheets.length === 0) {
-      container.textContent = "シートが見つかりません";
-      return;
-    }
-
-    sheets.forEach((sheetName) => {
-      const itemDiv = document.createElement("div");
-      itemDiv.className = "sheet-item";
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.id = `sheet-${sheetName}`;
-      checkbox.value = sheetName;
-      checkbox.checked = selectedSheets.includes(sheetName);
-
-      const label = document.createElement("label");
-      label.htmlFor = `sheet-${sheetName}`;
-      label.textContent = sheetName;
-
-      // チェックボックス変更イベント
-      checkbox.addEventListener("change", () => {
-        onChangeCallback();
-      });
-
-      itemDiv.appendChild(checkbox);
-      itemDiv.appendChild(label);
-      container.appendChild(itemDiv);
-    });
+      this.sheetListRenderer.render(sheets, selectedSheets, onChangeCallback);
   }
 
-  /**
-   * 選択されているシート名の配列を取得
-   */
   getSelectedSheetsFromUI() {
-    const container = this.els.sheetListContainer;
-    const checked = [];
-    container.querySelectorAll('input[type="checkbox"]:checked').forEach((cb) => {
-      checked.push(cb.value);
-    });
-    return checked;
-  }
-
-  /**
-   * カスタムセレクトボックスのセットアップ
-   */
-  setupCustomSelect(nativeSelect, onChangeCallback) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "custom-select-wrapper";
-    nativeSelect.parentNode.insertBefore(wrapper, nativeSelect);
-    wrapper.appendChild(nativeSelect);
-
-    const trigger = document.createElement("div");
-    trigger.className = "custom-select-trigger";
-    const initialText =
-      nativeSelect.options[nativeSelect.selectedIndex]?.textContent || "";
-    trigger.textContent = initialText;
-    wrapper.appendChild(trigger);
-
-    const optionsList = document.createElement("div");
-    optionsList.className = "custom-options";
-    wrapper.appendChild(optionsList);
-
-    const renderOptions = () => {
-      optionsList.innerHTML = "";
-      Array.from(nativeSelect.options).forEach((opt) => {
-        const optionDiv = document.createElement("div");
-        optionDiv.className =
-          "custom-option" + (opt.selected ? " selected" : "");
-        optionDiv.textContent = opt.textContent;
-        optionDiv.dataset.value = opt.value;
-        optionDiv.onclick = (e) => {
-          e.stopPropagation();
-          nativeSelect.value = opt.value;
-          trigger.textContent = opt.textContent;
-          optionsList.classList.remove("open");
-
-          Array.from(optionsList.children).forEach((el) =>
-            el.classList.remove("selected")
-          );
-          optionDiv.classList.add("selected");
-
-          if (onChangeCallback) onChangeCallback();
-        };
-        optionsList.appendChild(optionDiv);
-      });
-    };
-    renderOptions();
-
-    trigger.onclick = (e) => {
-      e.stopPropagation();
-      document.querySelectorAll(".custom-options.open").forEach((el) => {
-        if (el !== optionsList) el.classList.remove("open");
-      });
-      optionsList.classList.toggle("open");
-    };
-
-    document.addEventListener("click", (e) => {
-      if (!wrapper.contains(e.target)) {
-        optionsList.classList.remove("open");
-      }
-    });
-
-    return {
-      render: () => {
-        renderOptions();
-        const selected = nativeSelect.options[nativeSelect.selectedIndex];
-        if (selected) trigger.textContent = selected.textContent;
-      },
-      updateTrigger: () => {
-        const selected = nativeSelect.options[nativeSelect.selectedIndex];
-        if (selected) trigger.textContent = selected.textContent;
-      },
-    };
+      return this.sheetListRenderer.getSelectedSheets();
   }
 
   /**
